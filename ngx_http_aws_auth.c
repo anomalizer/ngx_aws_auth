@@ -136,7 +136,7 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     BIO_get_mem_ptr(b64, &bptr);
 
     ngx_memcpy(str_to_sign, bptr->data, bptr->length-1);
-    str_to_sign[bptr->length]='\0';
+    str_to_sign[bptr->length-1]='\0';
 
     BIO_free_all(b64);
 
