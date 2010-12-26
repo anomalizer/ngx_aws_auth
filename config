@@ -1,3 +1,4 @@
-ngx_addon_name=ngx_aws_auth
-HTTP_MODULES="$HTTP_MODULES ngx_aws_auth"
-NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_aws_auth.c"
+ngx_addon_name=ngx_http_aws_auth
+HTTP_MODULES="$HTTP_MODULES ngx_http_aws_auth_module"
+NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_aws_auth.c"
+CORE_LIBS="$CORE_LIBS -lssl"
