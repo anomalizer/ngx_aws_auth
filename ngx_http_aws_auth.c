@@ -2,6 +2,13 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+
+static const EVP_MD* evp_md = NULL;
+
 #define AWS_S3_VARIABLE "s3_auth_token"
 #define AWS_DATE_VARIABLE "aws_date"
 
@@ -12,6 +19,7 @@ static ngx_int_t register_variable(ngx_conf_t *cf);
 typedef struct {
     ngx_str_t access_key;
     ngx_str_t secret;
+    ngx_str_t s3_bucket;
 } ngx_http_aws_auth_conf_t;
 
 
@@ -28,6 +36,13 @@ static ngx_command_t  ngx_http_aws_auth_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, secret),
+      NULL },
+
+    { ngx_string("s3_bucket"),
+      NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_aws_auth_conf_t, s3_bucket),
       NULL },
 
       ngx_null_command
@@ -94,13 +109,42 @@ static ngx_int_t
 ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *v,
     uintptr_t data)
 {
-    
+    ngx_http_aws_auth_conf_t *aws_conf;
+    int t;
+    unsigned int md_len;
+    unsigned char md[EVP_MAX_MD_SIZE];
 
-    // TODO get the real stuff going
-    v->len = ngx_cached_http_time.len;
-    // v->data = ngx_palloc(r->pool, v->len);
-    //memcpy(v->data, ngx_cached_http_time.data, v->len);
-    v->data = ngx_cached_http_time.data;
+    aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+
+    u_char *str_to_sign = ngx_palloc(r->pool, r->uri.len + aws_conf->s3_bucket.len + 200);
+    ngx_sprintf(str_to_sign, "GET\n\n\n\nx-amz-date:%V\n/%V%V",
+        &ngx_cached_http_time, &aws_conf->s3_bucket, &r->uri);
+
+    if (evp_md==NULL)
+    {
+       evp_md = EVP_sha1();
+    }
+
+    HMAC(evp_md, aws_conf->secret.data, aws_conf->secret.len, str_to_sign, ngx_strlen(str_to_sign), md, &md_len);
+
+    BIO* b64 = BIO_new(BIO_f_base64());
+    BIO* bmem = BIO_new(BIO_s_mem());  
+    b64 = BIO_push(b64, bmem);
+    BIO_write(b64, md, md_len);
+    t = BIO_flush(b64); /* read the value esle some gcc, throws error*/
+    BUF_MEM *bptr; 
+    BIO_get_mem_ptr(b64, &bptr);
+
+    ngx_memcpy(str_to_sign, bptr->data, bptr->length-1);
+    str_to_sign[bptr->length]='\0';
+
+    BIO_free_all(b64);
+
+    u_char *signature = ngx_palloc(r->pool, 100 + aws_conf->access_key.len);
+    ngx_sprintf(signature, "AWS %V:%s", &aws_conf->access_key, str_to_sign);
+
+    v->len = ngx_strlen(signature);
+    v->data = signature;
     v->valid = 1;
     v->no_cacheable = 0;
     v->not_found = 0;
@@ -111,12 +155,7 @@ static ngx_int_t
 ngx_http_aws_auth_variable_date(ngx_http_request_t *r, ngx_http_variable_value_t *v,
     uintptr_t data)
 {
-    
-
-    // TODO get the real stuff going
     v->len = ngx_cached_http_time.len;
-    // v->data = ngx_palloc(r->pool, v->len);
-    //memcpy(v->data, ngx_cached_http_time.data, v->len);
     v->data = ngx_cached_http_time.data;
     v->valid = 1;
     v->no_cacheable = 0;
