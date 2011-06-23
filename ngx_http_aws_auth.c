@@ -171,7 +171,11 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
 
     BIO_free_all(b64);
 
-    u_char *signature = ngx_palloc(r->pool, 100 + aws_conf->access_key.len);
+   	int slen = 100 + aws_conf->access_key.len;
+	u_char *signature = ngx_palloc(r->pool, slen);
+	// Note there seems to bw a bug in ngx_sprintf, and if signature already contains data, 
+	// it does odd things, like not terminating the string where it is supposed to
+	memset(signature, 0, slen); 
     ngx_sprintf(signature, "AWS %V:%s", &aws_conf->access_key, str_to_sign);
 
     v->len = ngx_strlen(signature);
