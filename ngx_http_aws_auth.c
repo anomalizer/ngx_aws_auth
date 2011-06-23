@@ -131,8 +131,10 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
      *   the proxy url needs to be taken off the beginning of the URI in order 
      *   to sign it correctly.
     */
-    u_char *uri = ngx_palloc(r->pool, r->uri.len);
-    ngx_sprintf(uri,"%V",&r->uri);
+    u_char *uri = ngx_palloc(r->pool, r->uri.len + 200); // allow room for escaping
+    u_char *uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
+    *uri_end = '\0'; // null terminate
+
     if(ngx_strcmp(aws_conf->chop_prefix.data, "")) {
 	if(!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
 	  uri += aws_conf->chop_prefix.len;
@@ -143,11 +145,11 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
             "chop_prefix '%V' NOT in URI",&aws_conf->chop_prefix);
         }
     }
-	    
-    u_char *str_to_sign = ngx_palloc(r->pool, r->uri.len + aws_conf->s3_bucket.len + 200);
-    ngx_sprintf(str_to_sign, "GET\n\n\n\nx-amz-date:%V\n/%V%s",
+
+    u_char *str_to_sign = ngx_palloc(r->pool,r->uri.len + aws_conf->s3_bucket.len + 200);
+    ngx_sprintf(str_to_sign, "GET\n\n\n\nx-amz-date:%V\n/%V%s%Z",
         &ngx_cached_http_time, &aws_conf->s3_bucket,uri);
-    
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"String to sign:%s",str_to_sign);
 
 
 
@@ -171,12 +173,9 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
 
     BIO_free_all(b64);
 
-   	int slen = 100 + aws_conf->access_key.len;
-	u_char *signature = ngx_palloc(r->pool, slen);
-	// Note there seems to bw a bug in ngx_sprintf, and if signature already contains data, 
-	// it does odd things, like not terminating the string where it is supposed to
-	memset(signature, 0, slen); 
-    ngx_sprintf(signature, "AWS %V:%s", &aws_conf->access_key, str_to_sign);
+    u_char *signature = ngx_palloc(r->pool,100 + aws_conf->access_key.len);
+    ngx_sprintf(signature, "AWS %V:%s%Z", &aws_conf->access_key, str_to_sign);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"Signature: %s",signature);
 
     v->len = ngx_strlen(signature);
     v->data = signature;
