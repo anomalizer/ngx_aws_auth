@@ -125,6 +125,9 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
        evp_md = EVP_sha1();
     }
 
+    ngx_log_debug1(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                       "aws string being signed BEGIN:\n%s\naws string being signed END", str_to_sign);
+
     HMAC(evp_md, aws_conf->secret.data, aws_conf->secret.len, str_to_sign, ngx_strlen(str_to_sign), md, &md_len);
 
     BIO* b64 = BIO_new(BIO_f_base64());
