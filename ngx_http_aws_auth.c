@@ -20,6 +20,7 @@ typedef struct {
     ngx_str_t access_key;
     ngx_str_t secret;
     ngx_str_t s3_bucket;
+    ngx_str_t chop_prefix;
 } ngx_http_aws_auth_conf_t;
 
 
@@ -43,6 +44,13 @@ static ngx_command_t  ngx_http_aws_auth_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, s3_bucket),
+      NULL },
+    
+   { ngx_string("chop_prefix"),
+      NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_aws_auth_conf_t, chop_prefix),
       NULL },
 
       ngx_null_command
@@ -101,6 +109,7 @@ ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_str_value(conf->access_key, prev->access_key, "");
     ngx_conf_merge_str_value(conf->secret, prev->secret, "");
+    ngx_conf_merge_str_value(conf->chop_prefix, prev->chop_prefix, "");
 
     return NGX_CONF_OK;
 }
@@ -113,12 +122,36 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     int t;
     unsigned int md_len;
     unsigned char md[EVP_MAX_MD_SIZE];
-
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+    
 
-    u_char *str_to_sign = ngx_palloc(r->pool, r->uri.len + aws_conf->s3_bucket.len + 200);
-    ngx_sprintf(str_to_sign, "GET\n\n\n\nx-amz-date:%V\n/%V%V",
-        &ngx_cached_http_time, &aws_conf->s3_bucket, &r->uri);
+    /* 
+     *   This Block of code added to deal with paths that are not on the root -
+     *   that is, via proxy_pass that are being redirected and the base part of 
+     *   the proxy url needs to be taken off the beginning of the URI in order 
+     *   to sign it correctly.
+    */
+    u_char *uri = ngx_palloc(r->pool, r->uri.len + 200); // allow room for escaping
+    u_char *uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
+    *uri_end = '\0'; // null terminate
+
+    if(ngx_strcmp(aws_conf->chop_prefix.data, "")) {
+	if(!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
+	  uri += aws_conf->chop_prefix.len;
+          ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
+            "chop_prefix '%V' chopped from URI",&aws_conf->chop_prefix);
+        } else {
+          ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+            "chop_prefix '%V' NOT in URI",&aws_conf->chop_prefix);
+        }
+    }
+
+    u_char *str_to_sign = ngx_palloc(r->pool,r->uri.len + aws_conf->s3_bucket.len + 200);
+    ngx_sprintf(str_to_sign, "GET\n\n\n\nx-amz-date:%V\n/%V%s%Z",
+        &ngx_cached_http_time, &aws_conf->s3_bucket,uri);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"String to sign:%s",str_to_sign);
+
+
 
     if (evp_md==NULL)
     {
@@ -143,8 +176,9 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
 
     BIO_free_all(b64);
 
-    u_char *signature = ngx_palloc(r->pool, 100 + aws_conf->access_key.len);
-    ngx_sprintf(signature, "AWS %V:%s", &aws_conf->access_key, str_to_sign);
+    u_char *signature = ngx_palloc(r->pool,100 + aws_conf->access_key.len);
+    ngx_sprintf(signature, "AWS %V:%s%Z", &aws_conf->access_key, str_to_sign);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"Signature: %s",signature);
 
     v->len = ngx_strlen(signature);
     v->data = signature;
