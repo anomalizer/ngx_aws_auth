@@ -119,7 +119,6 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     uintptr_t data)
 {
     ngx_http_aws_auth_conf_t *aws_conf;
-    int t;
     unsigned int md_len;
     unsigned char md[EVP_MAX_MD_SIZE];
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
@@ -167,7 +166,7 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     BIO* bmem = BIO_new(BIO_s_mem());  
     b64 = BIO_push(b64, bmem);
     BIO_write(b64, md, md_len);
-    t = BIO_flush(b64); /* read the value esle some gcc, throws error*/
+    (void)BIO_flush(b64);
     BUF_MEM *bptr; 
     BIO_get_mem_ptr(b64, &bptr);
 
