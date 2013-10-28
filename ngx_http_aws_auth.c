@@ -135,8 +135,8 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     *uri_end = '\0'; // null terminate
 
     if(ngx_strcmp(aws_conf->chop_prefix.data, "")) {
-	if(!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
-	  uri += aws_conf->chop_prefix.len;
+        if(!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
+          uri += aws_conf->chop_prefix.len;
           ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
             "chop_prefix '%V' chopped from URI",&aws_conf->chop_prefix);
         } else {
@@ -145,8 +145,17 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
         }
     }
 
-    u_char *str_to_sign = ngx_palloc(r->pool,r->uri.len + aws_conf->s3_bucket.len + 200);
-    ngx_sprintf(str_to_sign, "GET\n\n\n\nx-amz-date:%V\n/%V%s%Z",
+    u_char *str_to_sign = ngx_palloc(r->pool,r->uri.len + aws_conf->s3_bucket.len + 500);
+    int offset = 0;
+    ngx_memcpy(str_to_sign, r->method_name.data, r->method_name.len);
+    offset += r->method_name.len;
+    ngx_sprintf(str_to_sign + offset, "\n\n");
+    offset += 2;
+    if ( r->headers_in.content_type != NULL ) {
+        ngx_memcpy(str_to_sign+offset, r->headers_in.content_type->value.data, r->headers_in.content_type->value.len);
+        offset += r->headers_in.content_type->value.len;
+    }
+    ngx_sprintf(str_to_sign + offset, "\n\nx-amz-date:%V\n/%V%s%Z",
         &ngx_cached_http_time, &aws_conf->s3_bucket,uri);
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"String to sign:%s",str_to_sign);
 
@@ -230,3 +239,4 @@ register_variable(ngx_conf_t *cf)
 /* 
  * vim: ts=4 sw=4 et
  */
+
