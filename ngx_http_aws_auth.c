@@ -201,49 +201,95 @@ ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     return NGX_CONF_OK;
 }
 
+static int
+ngx_http_cmp_hnames(const void *one, const void *two) {
+    ngx_table_elt_t *first, *second;
+    first  = (ngx_table_elt_t *) one;
+    second = (ngx_table_elt_t *) two;
+
+    return ngx_strcmp(first->key.data, second->key.data);
+}
+
 static ngx_int_t
-ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *v,
-    uintptr_t data)
-{
-    ngx_http_aws_auth_conf_t *aws_conf;
-    unsigned int md_len;
-    unsigned char md[EVP_MAX_MD_SIZE];
-    aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+ngx_http_aws_auth_get_canon_headers(ngx_http_request_t *r, ngx_str_t *retstr) {
+    ngx_array_t       *v;
+    ngx_list_part_t   *part;
+    ngx_table_elt_t   *header, *el, *h;
+    ngx_uint_t        i, lenall, offset;
 
-    /* 
-     * Get value for s3_bucket and chop_prefix 
-    */
-    if ( aws_conf->s3_bucket_script != NULL){
-        if (ngx_http_script_run(r, &aws_conf->s3_bucket, aws_conf->s3_bucket_script->lengths->elts, 1,
-                                aws_conf->s3_bucket_script->values->elts)
-            == NULL)
-        {
-            return NGX_CONF_ERROR;
-        }
-        aws_conf->s3_bucket.len = aws_conf->s3_bucket.len -1;
+    part = &r->headers_in.headers.part;
+    header = part->elts;
+
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "start normalize headers");
+    v = ngx_array_create(r->pool, 10, sizeof(ngx_table_elt_t));
+    if (v == NULL) {
+        return NGX_ERROR;
     }
-    if ( aws_conf->chop_prefix_script != NULL){
-        if (ngx_http_script_run(r, &aws_conf->chop_prefix, aws_conf->chop_prefix_script->lengths->elts, 1,
-                                aws_conf->chop_prefix_script->values->elts)
-            == NULL)
-        {
-            return NGX_CONF_ERROR;
-        }
-        aws_conf->chop_prefix.len = aws_conf->chop_prefix.len -1;
-    }  
 
-    /* 
-     *   This Block of code added to deal with paths that are not on the root -
-     *   that is, via proxy_pass that are being redirected and the base part of 
-     *   the proxy url needs to be taken off the beginning of the URI in order 
-     *   to sign it correctly.
-    */
+    lenall = 0;
+    for (i = 0; /* void */ ; i++) {
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+
+        if (header[i].hash == 0) {
+            continue;
+        }
+
+        if (ngx_strncasecmp(header[i].key.data, (u_char *) "x-amz-",  sizeof("x-amz-") - 1) == 0) {
+            h = ngx_array_push(v);
+            if (h == NULL) {
+                return NGX_ERROR;
+            }
+            h->key.data = header[i].key.data;
+            h->key.len  = header[i].key.len;
+            h->value.data  = header[i].value.data;
+            h->value.len  = header[i].value.len;
+            lenall += h->key.len + h->value.len + 2;
+            ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
+                "x-amz header key: %V; val: %V ",&h->key, &h->value);
+            continue;
+        }
+    }
+
+    ngx_qsort(v->elts, (size_t) v->nelts, sizeof(ngx_table_elt_t), ngx_http_cmp_hnames);
+
+    el = v->elts;
+    u_char * ret = ngx_palloc(r->pool, lenall + 1);
+    offset = 0;
+
+    for (i = 0; i < v->nelts ; i++) {
+        ngx_memcpy(ret + offset, el[i].key.data, el[i].key.len);
+        offset += el[i].key.len;
+        ngx_memcpy(ret + offset, (u_char *)":", 1);
+        offset += 1;
+        ngx_memcpy(ret + offset, el[i].value.data, el[i].value.len);
+        offset += el[i].value.len;
+        ngx_memcpy(ret + offset, (u_char *)"\n", 1);
+        offset += 1;
+    }
+    retstr->data = ret;
+    retstr->len = offset;
+
+    return NGX_OK;
+}
+
+static ngx_int_t
+ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
+    ngx_http_aws_auth_conf_t *aws_conf;
+    int uri_len;
+    aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
     u_char *uri = ngx_palloc(r->pool, r->uri.len + 200); // allow room for escaping
     u_char *uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
     *uri_end = '\0'; // null terminate
 
-    if(ngx_strcmp(aws_conf->chop_prefix.data, "")) {
-        if(!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
+    if (ngx_strcmp(aws_conf->chop_prefix.data, "")) {
+        if (!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
           uri += aws_conf->chop_prefix.len;
           ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
             "chop_prefix '%V' chopped from URI",&aws_conf->chop_prefix);
@@ -252,21 +298,183 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
             "chop_prefix '%V' NOT in URI",&aws_conf->chop_prefix);
         }
     }
-
-    u_char *str_to_sign = ngx_palloc(r->pool,r->uri.len + aws_conf->s3_bucket.len + 500);
-    int offset = 0;
-    ngx_memcpy(str_to_sign, r->method_name.data, r->method_name.len);
-    offset += r->method_name.len;
-    ngx_sprintf(str_to_sign + offset, "\n\n");
-    offset += 2;
-    if ( r->headers_in.content_type != NULL ) {
-        ngx_memcpy(str_to_sign+offset, r->headers_in.content_type->value.data, r->headers_in.content_type->value.len);
-        offset += r->headers_in.content_type->value.len;
+    // simulate canonical resources only for acl
+    if (r->args.len > 0 && !ngx_strncmp(r->args.data, (u_char*)"acl", sizeof("acl")-1)){
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ARGS: %V", &r->args);
+        ngx_memcpy(uri_end, (u_char*)"?acl", sizeof("?acl")-1);
+        *(uri_end + sizeof("?acl")-1) = '\0';
     }
-    ngx_sprintf(str_to_sign + offset, "\n\nx-amz-date:%V\n/%V%s%Z",
-        &ngx_cached_http_time, &aws_conf->s3_bucket,uri);
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"String to sign:%s",str_to_sign);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ARGS: %V", &r->args);
+    uri_len = ngx_strlen(uri);
+    u_char *ret = ngx_palloc(r->pool, uri_len + aws_conf->s3_bucket.len + 1); 
+    ngx_memcpy(ret, (u_char *)"/", 1);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "bucket: %V", &aws_conf->s3_bucket);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "uri:    %s", uri);
+    ngx_memcpy(ret+1, aws_conf->s3_bucket.data, aws_conf->s3_bucket.len);
+    ngx_memcpy(ret+1+aws_conf->s3_bucket.len, uri, uri_len);
+    retstr->data = ret;
+    retstr->len = 1 + uri_len + aws_conf->s3_bucket.len;
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "normalized resources: %V", retstr);
 
+    return NGX_OK;
+}
+
+static ngx_int_t
+ngx_http_aws_auth_get_dynamic_variables(ngx_http_request_t *r){
+    /* 
+     * Get value for s3_bucket and chop_prefix 
+    */
+    ngx_http_aws_auth_conf_t *aws_conf;
+    aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+    if (aws_conf->s3_bucket_script != NULL){
+        if (ngx_http_script_run(r, &aws_conf->s3_bucket, aws_conf->s3_bucket_script->lengths->elts, 1,
+                                aws_conf->s3_bucket_script->values->elts) == NULL) {
+            return NGX_ERROR;
+        }
+        aws_conf->s3_bucket.len = aws_conf->s3_bucket.len -1;
+    }
+    if (aws_conf->chop_prefix_script != NULL){
+        if (ngx_http_script_run(r, &aws_conf->chop_prefix, aws_conf->chop_prefix_script->lengths->elts, 1,
+                                aws_conf->chop_prefix_script->values->elts) == NULL) {
+            return NGX_ERROR;
+        }
+        aws_conf->chop_prefix.len = aws_conf->chop_prefix.len -1;
+    }
+    return NGX_OK;
+}
+
+static ngx_int_t
+ngx_http_aws_auth_sgn_newline(ngx_array_t* to_sign){
+    ngx_str_t         *el_sign;
+    el_sign = ngx_array_push(to_sign);
+    if (el_sign == NULL) {
+        return NGX_ERROR;
+    }
+    el_sign->data = (u_char *)"\n";
+    el_sign->len  = 1;
+    return NGX_OK;
+}
+
+static ngx_int_t
+ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *v,
+    uintptr_t data)
+{
+    ngx_http_aws_auth_conf_t *aws_conf;
+    ngx_array_t       *to_sign;
+    ngx_str_t         *el_sign, *el;
+    ngx_uint_t        lenall, i;
+    unsigned int      md_len;
+    unsigned char     md[EVP_MAX_MD_SIZE];
+
+    aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+    if (ngx_http_aws_auth_get_dynamic_variables(r) != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    /* 
+     *   This Block of code added to deal with paths that are not on the root -
+     *   that is, via proxy_pass that are being redirected and the base part of 
+     *   the proxy url needs to be taken off the beginning of the URI in order 
+     *   to sign it correctly.
+    */
+
+    to_sign = ngx_array_create(r->pool, 10, sizeof(ngx_str_t));
+    if (to_sign == NULL) {
+        return NGX_ERROR;
+    }
+
+    el_sign = ngx_array_push(to_sign);
+    if (el_sign == NULL) {
+        return NGX_ERROR;
+    }
+
+    lenall = 0;
+    if (ngx_strcmp(r->method_name.data, "HEAD")) {
+        el_sign->data = ngx_palloc(r->pool, sizeof("GET"));
+        ngx_memcpy(el_sign->data, (u_char *)"GET", sizeof("GET")-1);
+        el_sign->len  = sizeof("GET")-1;
+        lenall += el_sign->len;
+    } else {
+        el_sign->data = r->method_name.data;
+        el_sign->len  = r->method_name.len;
+        lenall += el_sign->len;
+    } 
+    ngx_http_aws_auth_sgn_newline(to_sign);
+
+    ngx_http_variable_value_t  *val;
+    val = ngx_palloc(r->pool, sizeof(ngx_http_variable_value_t));
+    if (val == NULL) {
+        return NGX_ENOMEM;
+    }
+    ngx_str_t h_name = ngx_string("http_content_md5");
+    if (ngx_http_variable_unknown_header(val, &h_name, &r->headers_in.headers.part, sizeof("http_")-1) == NGX_OK){
+        if (val->not_found == 0) {
+            ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "Content-MD5: %s", val->data);
+            el_sign = ngx_array_push(to_sign);
+            if (el_sign == NULL) {
+                return NGX_ERROR;
+            }
+            el_sign->data = val->data;
+            el_sign->len  = val->len;
+            lenall += el_sign->len;
+        }
+    }
+
+    ngx_http_aws_auth_sgn_newline(to_sign);
+
+    if (r->headers_in.content_type != NULL) {
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "content-type: %V", &r->headers_in.content_type->value);
+        el_sign = ngx_array_push(to_sign);
+        if (el_sign == NULL) {
+            return NGX_ERROR;
+        }
+        el_sign->data = r->headers_in.content_type->value.data;
+        el_sign->len  = r->headers_in.content_type->value.len;
+        lenall += el_sign->len;
+    }
+    ngx_http_aws_auth_sgn_newline(to_sign);
+    ngx_str_t h_date = ngx_string("http_date");
+    if (ngx_http_variable_unknown_header(val, &h_date, &r->headers_in.headers.part, sizeof("http_")-1) == NGX_OK) {
+        if (val->not_found == 0) {
+            ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "Date: %s", val->data);
+            el_sign = ngx_array_push(to_sign);
+            if (el_sign == NULL) {
+                return NGX_ERROR;
+            }
+            el_sign->data = val->data;
+            el_sign->len  = val->len;
+            lenall += el_sign->len;
+        }
+    }
+
+    ngx_http_aws_auth_sgn_newline(to_sign);
+
+    el_sign = ngx_array_push(to_sign);
+    if (el_sign == NULL) {
+        return NGX_ERROR;
+    }
+    ngx_http_aws_auth_get_canon_headers(r, el_sign);
+    lenall += el_sign->len;
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "normalized: %V", el_sign);
+
+    el_sign = ngx_array_push(to_sign);
+    if (el_sign == NULL) {
+        return NGX_ERROR;
+    }
+    ngx_http_aws_auth_get_canon_resource(r, el_sign);
+    lenall += el_sign->len;
+    el = to_sign->elts;
+
+    lenall += 4; //newlines 
+    u_char * str_to_sign = ngx_palloc(r->pool, lenall + 50);
+    int offset = 0;
+    for (i = 0; i < to_sign->nelts ; i++) {
+        ngx_memcpy(str_to_sign + offset, el[i].data, el[i].len);
+        offset += el[i].len;
+    }
+    *(str_to_sign+offset) = '\0';
+
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"String to sign:%s",str_to_sign);
 
 
     if (evp_md==NULL)
