@@ -15,14 +15,24 @@ static const EVP_MD* evp_md = NULL;
 static void* ngx_http_aws_auth_create_loc_conf(ngx_conf_t *cf);
 static char* ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 static ngx_int_t register_variable(ngx_conf_t *cf);
+static char *
+ngx_http_aws_auth_set_s3_bucket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *
+ngx_http_aws_auth_set_chop_prefix(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+
+typedef struct {
+    ngx_array_t                *lengths;
+    ngx_array_t                *values;
+} ngx_http_aws_auth_script_t;
 
 typedef struct {
     ngx_str_t access_key;
     ngx_str_t secret;
     ngx_str_t s3_bucket;
     ngx_str_t chop_prefix;
+    ngx_http_aws_auth_script_t *s3_bucket_script;
+    ngx_http_aws_auth_script_t *chop_prefix_script;
 } ngx_http_aws_auth_conf_t;
-
 
 static ngx_command_t  ngx_http_aws_auth_commands[] = {
     { ngx_string("aws_access_key"),
@@ -41,14 +51,14 @@ static ngx_command_t  ngx_http_aws_auth_commands[] = {
 
     { ngx_string("s3_bucket"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
+      ngx_http_aws_auth_set_s3_bucket,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, s3_bucket),
       NULL },
-    
-   { ngx_string("chop_prefix"),
+  
+    { ngx_string("chop_prefix"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
+      ngx_http_aws_auth_set_chop_prefix,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, chop_prefix),
       NULL },
@@ -86,6 +96,83 @@ ngx_module_t  ngx_http_aws_auth_module = {
     NGX_MODULE_V1_PADDING
 };
 
+static char *
+ngx_http_aws_auth_set_s3_bucket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_aws_auth_conf_t *aws_conf = conf;
+    ngx_http_script_compile_t   sc;
+    ngx_str_t *value;
+    ngx_uint_t n;
+    value = cf->args->elts;
+    n = ngx_http_script_variables_count(&value[1]);
+
+    if (n == 0) {
+        // set s3_bucket as string
+        aws_conf->s3_bucket.data = value[1].data;
+        aws_conf->s3_bucket.len  = value[1].len;
+    } else {
+        //add script to compile
+        aws_conf->s3_bucket_script = ngx_pcalloc(cf->pool, sizeof(ngx_http_aws_auth_script_t));
+        if (aws_conf->s3_bucket_script == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        ngx_memzero(&sc, sizeof(ngx_http_script_compile_t));
+
+        sc.cf = cf;
+        sc.source = &value[1];
+        sc.lengths = &aws_conf->s3_bucket_script->lengths;
+        sc.values = &aws_conf->s3_bucket_script->values;
+        sc.variables = n;
+        sc.complete_lengths = 1;
+        sc.complete_values = 1;
+
+        if (ngx_http_script_compile(&sc) != NGX_OK) {
+            return NGX_CONF_ERROR;
+        }
+    }
+    return NGX_CONF_OK;
+}
+
+static char *
+ngx_http_aws_auth_set_chop_prefix(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_aws_auth_conf_t *aws_conf = conf;
+    ngx_http_script_compile_t   sc;
+    ngx_str_t *value;
+    ngx_uint_t n;
+    value = cf->args->elts;
+    n = ngx_http_script_variables_count(&value[1]);
+
+    if (n == 0) {
+        // set chop_prefix as string
+        aws_conf->chop_prefix.data = value[1].data;
+        aws_conf->chop_prefix.len  = value[1].len;
+    } else {
+        //add script to compile
+        aws_conf->chop_prefix_script = ngx_pcalloc(cf->pool, sizeof(ngx_http_aws_auth_script_t));
+        if (aws_conf->chop_prefix_script == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        ngx_memzero(&sc, sizeof(ngx_http_script_compile_t));
+
+        sc.cf = cf;
+        sc.source = &value[1];
+        sc.lengths = &aws_conf->chop_prefix_script->lengths;
+        sc.values = &aws_conf->chop_prefix_script->values;
+        sc.variables = n;
+        sc.complete_lengths = 1;
+        sc.complete_values = 1;
+
+        if (ngx_http_script_compile(&sc) != NGX_OK) {
+            return NGX_CONF_ERROR;
+        }
+    }
+    return NGX_CONF_OK;
+}
+
+
 static void *
 ngx_http_aws_auth_create_loc_conf(ngx_conf_t *cf)
 {
@@ -122,7 +209,28 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     unsigned int md_len;
     unsigned char md[EVP_MAX_MD_SIZE];
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
-    
+
+    /* 
+     * Get value for s3_bucket and chop_prefix 
+    */
+    if ( aws_conf->s3_bucket_script != NULL){
+        if (ngx_http_script_run(r, &aws_conf->s3_bucket, aws_conf->s3_bucket_script->lengths->elts, 1,
+                                aws_conf->s3_bucket_script->values->elts)
+            == NULL)
+        {
+            return NGX_CONF_ERROR;
+        }
+        aws_conf->s3_bucket.len = aws_conf->s3_bucket.len -1;
+    }
+    if ( aws_conf->chop_prefix_script != NULL){
+        if (ngx_http_script_run(r, &aws_conf->chop_prefix, aws_conf->chop_prefix_script->lengths->elts, 1,
+                                aws_conf->chop_prefix_script->values->elts)
+            == NULL)
+        {
+            return NGX_CONF_ERROR;
+        }
+        aws_conf->chop_prefix.len = aws_conf->chop_prefix.len -1;
+    }  
 
     /* 
      *   This Block of code added to deal with paths that are not on the root -
@@ -135,8 +243,8 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     *uri_end = '\0'; // null terminate
 
     if(ngx_strcmp(aws_conf->chop_prefix.data, "")) {
-	if(!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
-	  uri += aws_conf->chop_prefix.len;
+        if(!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
+          uri += aws_conf->chop_prefix.len;
           ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
             "chop_prefix '%V' chopped from URI",&aws_conf->chop_prefix);
         } else {
@@ -145,8 +253,17 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
         }
     }
 
-    u_char *str_to_sign = ngx_palloc(r->pool,r->uri.len + aws_conf->s3_bucket.len + 200);
-    ngx_sprintf(str_to_sign, "GET\n\n\n\nx-amz-date:%V\n/%V%s%Z",
+    u_char *str_to_sign = ngx_palloc(r->pool,r->uri.len + aws_conf->s3_bucket.len + 500);
+    int offset = 0;
+    ngx_memcpy(str_to_sign, r->method_name.data, r->method_name.len);
+    offset += r->method_name.len;
+    ngx_sprintf(str_to_sign + offset, "\n\n");
+    offset += 2;
+    if ( r->headers_in.content_type != NULL ) {
+        ngx_memcpy(str_to_sign+offset, r->headers_in.content_type->value.data, r->headers_in.content_type->value.len);
+        offset += r->headers_in.content_type->value.len;
+    }
+    ngx_sprintf(str_to_sign + offset, "\n\nx-amz-date:%V\n/%V%s%Z",
         &ngx_cached_http_time, &aws_conf->s3_bucket,uri);
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,"String to sign:%s",str_to_sign);
 
@@ -230,3 +347,4 @@ register_variable(ngx_conf_t *cf)
 /* 
  * vim: ts=4 sw=4 et
  */
+
