@@ -284,7 +284,7 @@ ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
     ngx_http_aws_auth_conf_t *aws_conf;
     int uri_len;
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
-    u_char *uri = ngx_palloc(r->pool, r->uri.len + 200); // allow room for escaping
+    u_char *uri = ngx_palloc(r->pool, r->uri.len * 3); // allow room for escaping
     u_char *uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
     *uri_end = '\0'; // null terminate
 
@@ -389,16 +389,9 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     }
 
     lenall = 0;
-    if (ngx_strcmp(r->method_name.data, "HEAD")) {
-        el_sign->data = ngx_palloc(r->pool, sizeof("GET"));
-        ngx_memcpy(el_sign->data, (u_char *)"GET", sizeof("GET")-1);
-        el_sign->len  = sizeof("GET")-1;
-        lenall += el_sign->len;
-    } else {
-        el_sign->data = r->method_name.data;
-        el_sign->len  = r->method_name.len;
-        lenall += el_sign->len;
-    } 
+    el_sign->data = r->method_name.data;
+    el_sign->len  = r->method_name.len;
+    lenall += el_sign->len;
     ngx_http_aws_auth_sgn_newline(to_sign);
 
     ngx_http_variable_value_t  *val;
