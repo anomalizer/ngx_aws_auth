@@ -30,6 +30,7 @@ typedef struct {
     ngx_str_t secret;
     ngx_str_t s3_bucket;
     ngx_str_t chop_prefix;
+    ngx_uint_t add_date;
     ngx_http_aws_auth_script_t *s3_bucket_script;
     ngx_http_aws_auth_script_t *chop_prefix_script;
 } ngx_http_aws_auth_conf_t;
@@ -197,6 +198,7 @@ ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->access_key, prev->access_key, "");
     ngx_conf_merge_str_value(conf->secret, prev->secret, "");
     ngx_conf_merge_str_value(conf->chop_prefix, prev->chop_prefix, "");
+    ngx_conf_merge_uint_value(conf->add_date, prev->add_date, 0);
 
     return NGX_CONF_OK;
 }
@@ -212,6 +214,7 @@ ngx_http_cmp_hnames(const void *one, const void *two) {
 
 static ngx_int_t
 ngx_http_aws_auth_get_canon_headers(ngx_http_request_t *r, ngx_str_t *retstr) {
+    ngx_http_aws_auth_conf_t *aws_conf;
     ngx_array_t       *v;
     ngx_list_part_t   *part;
     ngx_table_elt_t   *header, *el, *h;
@@ -255,6 +258,24 @@ ngx_http_aws_auth_get_canon_headers(ngx_http_request_t *r, ngx_str_t *retstr) {
                 "x-amz header key: %V; val: %V ",&h->key, &h->value);
             continue;
         }
+    }
+
+    aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+    if (aws_conf->add_date) {
+        h = ngx_array_push(v);
+        if (h == NULL) {
+            return NGX_ERROR;
+        }
+        u_char * name = ngx_palloc(r->pool, sizeof("x-amz-date"));
+        u_char * val  = ngx_palloc(r->pool, ngx_cached_http_time.len + 1);
+        
+        ngx_memcpy(name, (u_char *)"x-amz-date", sizeof("x-amz-date")-1);
+        ngx_memcpy(val, ngx_cached_http_time.data, ngx_cached_http_time.len);
+        h->key.data = name;
+        h->key.len  = sizeof("x-amz-date")-1;
+        h->value.data  = val;
+        h->value.len  = ngx_cached_http_time.len;
+        lenall += h->key.len + h->value.len + 2;
     }
 
     ngx_qsort(v->elts, (size_t) v->nelts, sizeof(ngx_table_elt_t), ngx_http_cmp_hnames);
@@ -508,12 +529,16 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
 static ngx_int_t
 ngx_http_aws_auth_variable_date(ngx_http_request_t *r, ngx_http_variable_value_t *v,
     uintptr_t data)
-{
+{   
+    ngx_http_aws_auth_conf_t *aws_conf;
     v->len = ngx_cached_http_time.len;
     v->data = ngx_cached_http_time.data;
     v->valid = 1;
     v->no_cacheable = 0;
     v->not_found = 0;
+    aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+    //get this varialbe enable add x-amz-date to sign
+    aws_conf->add_date = 1;
     return NGX_OK;
 }
 
