@@ -269,13 +269,12 @@ ngx_http_aws_auth_get_canon_headers(ngx_http_request_t *r, ngx_str_t *retstr) {
         if (h == NULL) {
             return NGX_ERROR;
         }
-        u_char * name = ngx_palloc(r->pool, sizeof("x-amz-date"));
+
+        ngx_str_t amz_date = ngx_string("x-amz-date");
         u_char * val  = ngx_palloc(r->pool, ngx_cached_http_time.len + 1);
-        
-        ngx_memcpy(name, (u_char *)"x-amz-date", sizeof("x-amz-date")-1);
         ngx_memcpy(val, ngx_cached_http_time.data, ngx_cached_http_time.len);
-        h->key.data = name;
-        h->key.len  = sizeof("x-amz-date")-1;
+        h->key.data = amz_date.data;
+        h->key.len  = amz_date.len;
         h->value.data  = val;
         h->value.len  = ngx_cached_http_time.len;
         lenall += h->key.len + h->value.len + 2;
