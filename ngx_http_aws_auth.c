@@ -307,7 +307,7 @@ ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
     ngx_http_aws_auth_conf_t *aws_conf;
     int uri_len;
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
-    u_char *uri = ngx_palloc(r->pool, r->uri.len * 3); // allow room for escaping
+    u_char *uri = ngx_palloc(r->pool, r->uri.len * 3 + 5); // allow room for escaping
     u_char *uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
     *uri_end = '\0'; // null terminate
 
