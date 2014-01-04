@@ -218,7 +218,7 @@ ngx_http_aws_auth_get_canon_headers(ngx_http_request_t *r, ngx_str_t *retstr) {
     ngx_array_t       *v;
     ngx_list_part_t   *part;
     ngx_table_elt_t   *header, *el, *h;
-    ngx_uint_t        i, lenall, offset;
+    ngx_uint_t        i, ch, lenall, offset;
 
     part = &r->headers_in.headers.part;
     header = part->elts;
@@ -249,7 +249,10 @@ ngx_http_aws_auth_get_canon_headers(ngx_http_request_t *r, ngx_str_t *retstr) {
             if (h == NULL) {
                 return NGX_ERROR;
             }
-            h->key.data = header[i].key.data;
+            h->key.data = ngx_palloc(r->pool, header[i].key.len);
+            for (ch = 0; ch < header[i].key.len; ch++) {
+                h->key.data[ch] = ngx_tolower(header[i].key.data[ch]);
+            }
             h->key.len  = header[i].key.len;
             h->value.data  = header[i].value.data;
             h->value.len  = header[i].value.len;
