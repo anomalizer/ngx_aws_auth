@@ -35,6 +35,33 @@ typedef struct {
     ngx_http_aws_auth_script_t *chop_prefix_script;
 } ngx_http_aws_auth_conf_t;
 
+static const char *signed_subresources[] = {
+  "acl",
+  "cors",
+  "delete",
+  "lifecycle",
+  "location",
+  "logging",
+  "notification",
+  "partNumber",
+  "policy",
+  "requestPayment",
+  "response-cache-control",
+  "response-content-disposition",
+  "response-content-encoding",
+  "response-content-language",
+  "response-content-type",
+  "response-expires",
+  "torrent",
+  "uploadId",
+  "uploads",
+  "versionId",
+  "versioning",
+  "versions",
+  "website",
+  NULL
+};
+
 static ngx_command_t  ngx_http_aws_auth_commands[] = {
     { ngx_string("aws_access_key"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
@@ -302,12 +329,47 @@ ngx_http_aws_auth_get_canon_headers(ngx_http_request_t *r, ngx_str_t *retstr) {
     return NGX_OK;
 }
 
+
+/* copy paste from ngx_http_arg */
+ngx_int_t
+ngx_http_arg2(ngx_http_request_t *r, u_char *name, size_t len, ngx_str_t *value) {
+    u_char  *p, *last;
+    if (r->args.len == 0) {
+        return NGX_DECLINED;
+    }
+    p = r->args.data;
+    last = p + r->args.len;
+    for ( /* void */ ; p < last; p++) {
+        if (p + len > last) {
+            return NGX_DECLINED;
+        }
+        if (ngx_strncasecmp(p, name, len) != 0) {
+            continue;
+        }
+        if (p == r->args.data || *(p - 1) == '&' || (p + len) == last || *(p + len) == '&' || *(p + len) == '=') {
+            if (*(p + len) == '=') {
+                value->data = p + len + 1;
+                p = ngx_strlchr(p, last, '&');
+                if ( p == NULL) {
+                    p = r->args.data + r->args.len;
+                }
+                value->len = p - value->data;
+            } else {
+                value->len = 0;
+            }
+            return NGX_OK;
+        }
+    }
+    return NGX_DECLINED;
+}
+
+
 static ngx_int_t
 ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
     ngx_http_aws_auth_conf_t *aws_conf;
     int uri_len;
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
-    u_char *uri = ngx_palloc(r->pool, r->uri.len * 3 + 5); // allow room for escaping
+    u_char *uri = ngx_palloc(r->pool, r->uri.len * 3 + 1); // allow room for escaping
     u_char *uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
     *uri_end = '\0'; // null terminate
 
@@ -321,23 +383,50 @@ ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
             "chop_prefix '%V' NOT in URI",&aws_conf->chop_prefix);
         }
     }
-    // simulate canonical resources only for acl
-    if (r->args.len > 0 && !ngx_strncmp(r->args.data, (u_char*)"acl", sizeof("acl")-1)){
-        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ARGS: %V", &r->args);
-        ngx_memcpy(uri_end, (u_char*)"?acl", sizeof("?acl")-1);
-        *(uri_end + sizeof("?acl")-1) = '\0';
-    }
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "ARGS: %V", &r->args);
+
+    u_char *c_args = ngx_palloc(r->pool, r->args.len + 1); 
+    u_char *c_args_cur = c_args;
+    ngx_str_t arg_val;
+    ngx_int_t c_args_len = 0;
+    if (r->args.len > 0) {
+        const char **p = signed_subresources;
+        for (; *p; ++p) {
+            if (ngx_http_arg2(r, (u_char *)*p, ngx_strlen((u_char *)*p), &arg_val) == NGX_OK) {
+                if (c_args_cur == c_args) {
+                    *c_args_cur = '?';
+                } else {
+                    *c_args_cur = '&';
+                }
+                c_args_cur += 1;
+                c_args_cur = ngx_cpystrn(c_args_cur, (u_char *)*p, ngx_strlen((u_char *)*p) + 1);
+                if (arg_val.len > 0) {
+                    *c_args_cur = '=';
+                    c_args_cur += 1;
+                    ngx_memcpy(c_args_cur, arg_val.data, arg_val.len);
+                    c_args_cur += arg_val.len;
+                }
+            }
+        }
+        c_args_len = c_args_cur - c_args;
+        *c_args_cur = '\0';
+    } 
+
     uri_len = ngx_strlen(uri);
-    u_char *ret = ngx_palloc(r->pool, uri_len + aws_conf->s3_bucket.len + sizeof("/") + 1); 
+    u_char *ret = ngx_palloc(r->pool, uri_len + aws_conf->s3_bucket.len + sizeof("/") + c_args_len + 1); 
     u_char *cur = ret; 
     cur = ngx_cpystrn(cur, (u_char *)"/", sizeof("/"));
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "bucket: %V", &aws_conf->s3_bucket);
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "uri:    %s", uri);
     cur = ngx_cpystrn(cur, aws_conf->s3_bucket.data, aws_conf->s3_bucket.len + 1);
     cur = ngx_cpystrn(cur, uri, uri_len + 1);
+      
+    if ( c_args_len ) {
+        ngx_memcpy(cur, c_args, c_args_len + 1);
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "args: %s", c_args);
+    }
+    *(cur+c_args_len) = '\0';
     retstr->data = ret;
-    retstr->len = sizeof("/") - 1 + uri_len + aws_conf->s3_bucket.len;
+    retstr->len = sizeof("/") - 1 + uri_len + aws_conf->s3_bucket.len + c_args_len;
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "normalized resources: %V", retstr);
 
     return NGX_OK;
