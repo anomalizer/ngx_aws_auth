@@ -233,10 +233,15 @@ ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 static int
 ngx_http_cmp_hnames(const void *one, const void *two) {
     ngx_table_elt_t *first, *second;
+    int ret;
     first  = (ngx_table_elt_t *) one;
     second = (ngx_table_elt_t *) two;
-
-    return ngx_strcmp(first->key.data, second->key.data);
+    ret = ngx_strncmp(first->key.data, second->key.data, ngx_min(first->key.len, second->key.len));
+    if (ret != 0){
+        return ret;
+    } else {
+        return (first->key.len - second->key.len);
+    }
 }
 
 static ngx_int_t

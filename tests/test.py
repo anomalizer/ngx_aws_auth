@@ -42,7 +42,19 @@ class Tester():
         k = Key(bucket)
         k.key = self.fkey 
         k.set_contents_from_string(self.content, headers={'Content-Type': str(self.content_type)})        
-    
+
+    def upload_with_headers(self):
+        bucket = self.conn.get_bucket(self.bucket)
+        k = Key(bucket)
+        k.key = self.fkey
+        headers = {'Content-Type': str(self.content_type),
+                   'x-amz-meta-origin': 'valtest',
+                   'x-amz-meta-origin-a': 'valtest-a'}
+        k.set_contents_from_string(self.content, headers=headers )        
+        headers = {'Content-Type': str(self.content_type),
+                   'x-amz-meta-origin-a': 'valtest-a'}
+        k.set_contents_from_string(self.content, headers=headers )        
+   
     def set_acl(self, policy):
         bucket = self.conn.get_bucket(self.bucket)
         k = Key(bucket)
@@ -61,6 +73,18 @@ class Tester():
             return False
         return True
  
+    def test_upload_with_headers(self):
+        self.delete()
+        self.upload_with_headers()
+        self.set_acl('public-read')
+ 
+        bucket = self.conn.get_bucket(self.bucket)
+        k2 = Key(bucket)
+        k2.key = self.fkey
+        if k2.get_contents_as_string()!=self.content:
+            return False
+        return True
+
     def test_upload_private_acl(self):
         self.delete()
         self.upload()
@@ -140,7 +164,10 @@ class BotoTest(TestCase):
 
     def test_upload(self):
         self.assertEquals(self.boto_tester.test_upload(), True)
-    
+
+    def test_upload_with_headers(self):
+        self.assertEquals(self.boto_tester.test_upload_with_headers(), True)
+   
     def test_delete(self):
         self.assertEquals(self.boto_tester.test_delete(), True)
 
