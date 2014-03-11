@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 import unittest
 from unittest import TestCase
@@ -12,6 +12,7 @@ s3_cred = { 'host': 'precise64',
             #'port': 80,
             'access_key':'4WLAD43EZZ64EPK1CIRO', 
             'secret_key':'uGA3yy/NJqITgERIVmr9AgUZRBqUjPADvfQoxpKL',
+            #'bucket': 'rewrite',
             'bucket': 'test1',
           }
 
@@ -157,7 +158,8 @@ class Tester():
 class BotoTest(TestCase):
     def setUp(self):
 	self.boto_tester = Tester(s3_cred['host'], s3_cred['port'], s3_cred['access_key'], 
-            s3_cred['secret_key'], s3_cred['bucket'], 'filename.txt', 'filecontentttttt', 'text/html', U_M_LIMIT + 100)
+            s3_cred['secret_key'], s3_cred['bucket'], "filenamefile.txt", 'filecontentttttt', 'text/html', U_M_LIMIT + 100)
+            #s3_cred['secret_key'], s3_cred['bucket'], "filename_ żźćŻŹĆŁÓĄaą.txt", 'filecontentttttt', 'text/html', U_M_LIMIT + 100)
 
     #def test_create_bucket(self):
     #     self.assertEquals(self.boto_tester.create_bucket(), True)

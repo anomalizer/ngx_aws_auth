@@ -16,6 +16,10 @@ static void* ngx_http_aws_auth_create_loc_conf(ngx_conf_t *cf);
 static char* ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 static ngx_int_t register_variable(ngx_conf_t *cf);
 static char *
+ngx_http_aws_auth_set_access_key(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *
+ngx_http_aws_auth_set_secret(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *
 ngx_http_aws_auth_set_s3_bucket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *
 ngx_http_aws_auth_set_chop_prefix(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
@@ -31,6 +35,9 @@ typedef struct {
     ngx_str_t s3_bucket;
     ngx_str_t chop_prefix;
     ngx_uint_t add_date;
+    ngx_flag_t encode_uri;
+    ngx_http_aws_auth_script_t *access_key_script;
+    ngx_http_aws_auth_script_t *secret_script;
     ngx_http_aws_auth_script_t *s3_bucket_script;
     ngx_http_aws_auth_script_t *chop_prefix_script;
 } ngx_http_aws_auth_conf_t;
@@ -65,14 +72,14 @@ static const char *signed_subresources[] = {
 static ngx_command_t  ngx_http_aws_auth_commands[] = {
     { ngx_string("aws_access_key"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
+      ngx_http_aws_auth_set_access_key,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, access_key),
       NULL },
 
     { ngx_string("aws_secret_key"),
       NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_str_slot,
+      ngx_http_aws_auth_set_secret,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, secret),
       NULL },
@@ -89,6 +96,13 @@ static ngx_command_t  ngx_http_aws_auth_commands[] = {
       ngx_http_aws_auth_set_chop_prefix,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, chop_prefix),
+      NULL },
+
+    { ngx_string("sign_encode_uri"),
+      NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_aws_auth_conf_t, encode_uri),
       NULL },
 
       ngx_null_command
@@ -123,6 +137,84 @@ ngx_module_t  ngx_http_aws_auth_module = {
     NULL,                                  /* exit master */
     NGX_MODULE_V1_PADDING
 };
+
+static char *
+ngx_http_aws_auth_set_access_key(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_aws_auth_conf_t *aws_conf = conf;
+    ngx_http_script_compile_t   sc;
+    ngx_str_t *value;
+    ngx_uint_t n;
+    value = cf->args->elts;
+    n = ngx_http_script_variables_count(&value[1]);
+
+    if (n == 0) {
+        // set access_key as string
+        aws_conf->access_key.data = value[1].data;
+        aws_conf->access_key.len  = value[1].len;
+    } else {
+        //add script to compile
+        aws_conf->access_key_script = ngx_pcalloc(cf->pool, sizeof(ngx_http_aws_auth_script_t));
+        if (aws_conf->access_key_script == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        ngx_memzero(&sc, sizeof(ngx_http_script_compile_t));
+
+        sc.cf = cf;
+        sc.source = &value[1];
+        sc.lengths = &aws_conf->access_key_script->lengths;
+        sc.values = &aws_conf->access_key_script->values;
+        sc.variables = n;
+        sc.complete_lengths = 1;
+        sc.complete_values = 1;
+
+        if (ngx_http_script_compile(&sc) != NGX_OK) {
+            return NGX_CONF_ERROR;
+        }
+    }
+    return NGX_CONF_OK;
+}
+
+static char *
+ngx_http_aws_auth_set_secret(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_aws_auth_conf_t *aws_conf = conf;
+    ngx_http_script_compile_t   sc;
+    ngx_str_t *value;
+    ngx_uint_t n;
+    value = cf->args->elts;
+    n = ngx_http_script_variables_count(&value[1]);
+
+    if (n == 0) {
+        // set secret as string
+        aws_conf->secret.data = value[1].data;
+        aws_conf->secret.len  = value[1].len;
+    } else {
+        //add script to compile
+        aws_conf->secret_script = ngx_pcalloc(cf->pool, sizeof(ngx_http_aws_auth_script_t));
+        if (aws_conf->secret_script == NULL) {
+            return NGX_CONF_ERROR;
+        }
+
+        ngx_memzero(&sc, sizeof(ngx_http_script_compile_t));
+
+        sc.cf = cf;
+        sc.source = &value[1];
+        sc.lengths = &aws_conf->secret_script->lengths;
+        sc.values = &aws_conf->secret_script->values;
+        sc.variables = n;
+        sc.complete_lengths = 1;
+        sc.complete_values = 1;
+
+        if (ngx_http_script_compile(&sc) != NGX_OK) {
+            return NGX_CONF_ERROR;
+        }
+    }
+    return NGX_CONF_OK;
+}
+
+
 
 static char *
 ngx_http_aws_auth_set_s3_bucket(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -210,7 +302,7 @@ ngx_http_aws_auth_create_loc_conf(ngx_conf_t *cf)
     if (conf == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    conf->encode_uri = NGX_CONF_UNSET;
     return conf;    
 }
 
@@ -226,6 +318,7 @@ ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->secret, prev->secret, "");
     ngx_conf_merge_str_value(conf->chop_prefix, prev->chop_prefix, "");
     ngx_conf_merge_uint_value(conf->add_date, prev->add_date, 0);
+    ngx_conf_merge_value(conf->encode_uri, prev->encode_uri, 1);
 
     return NGX_CONF_OK;
 }
@@ -374,9 +467,18 @@ ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
     ngx_http_aws_auth_conf_t *aws_conf;
     int uri_len;
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
-    u_char *uri = ngx_palloc(r->pool, r->uri.len * 3 + 1); // allow room for escaping
-    u_char *uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
-    *uri_end = '\0'; // null terminate
+    u_char *uri, *uri_end;
+    if (aws_conf->encode_uri) {
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "sign_encode_uri on: %d", aws_conf->encode_uri);
+        uri = ngx_palloc(r->pool, r->uri.len * 3 + 1); // allow room for escaping
+        uri_end = (u_char*) ngx_escape_uri(uri,r->uri.data, r->uri.len, NGX_ESCAPE_URI);
+        *uri_end = '\0'; // null terminate
+    } else {
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "sign_encode_uri off: %d", aws_conf->encode_uri);
+        uri = ngx_palloc(r->pool, r->uri.len + 1);
+        ngx_memcpy(uri, r->uri.data, r->uri.len);
+        *(uri+r->uri.len) = '\0'; // null terminate
+    }
 
     if (aws_conf->chop_prefix.len > 0) {
         if (!ngx_strncmp(r->uri.data, aws_conf->chop_prefix.data, aws_conf->chop_prefix.len)) {
@@ -440,10 +542,24 @@ ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
 static ngx_int_t
 ngx_http_aws_auth_get_dynamic_variables(ngx_http_request_t *r){
     /* 
-     * Get value for s3_bucket and chop_prefix 
+     * Get value for access_key, secret, s3_bucket and chop_prefix 
     */
     ngx_http_aws_auth_conf_t *aws_conf;
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
+    if (aws_conf->access_key_script != NULL){
+        if (ngx_http_script_run(r, &aws_conf->access_key, aws_conf->access_key_script->lengths->elts, 1,
+                                aws_conf->access_key_script->values->elts) == NULL) {
+            return NGX_ERROR;
+        }
+        aws_conf->access_key.len = aws_conf->access_key.len -1;
+    }
+    if (aws_conf->secret_script != NULL){
+        if (ngx_http_script_run(r, &aws_conf->secret, aws_conf->secret_script->lengths->elts, 1,
+                                aws_conf->secret_script->values->elts) == NULL) {
+            return NGX_ERROR;
+        }
+        aws_conf->secret.len = aws_conf->secret.len -1;
+    }
     if (aws_conf->s3_bucket_script != NULL){
         if (ngx_http_script_run(r, &aws_conf->s3_bucket, aws_conf->s3_bucket_script->lengths->elts, 1,
                                 aws_conf->s3_bucket_script->values->elts) == NULL) {
