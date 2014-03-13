@@ -8,6 +8,7 @@ server {
         set $secret uGA3yy/NJqITgERIVmr9AgUZRBqUjPADvfQoxpKL;
         location /test1 {
                 aws_access_key $key;
+                #aws_access_key 4WLAD43EZZ64EPK1CIRO;
                 aws_secret_key $secret;
                 #sign_encode_uri off;
                 s3_bucket test1;
