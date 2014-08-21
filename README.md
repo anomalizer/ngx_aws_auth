@@ -20,7 +20,9 @@ Implements proxying of authenticated requests to S3.
 
     # This is an example that does not use the server root for the proxy root
 	location /myfiles {
-      proxy_pass http://your_s3_bucket.s3.amazonaws.com/;
+	
+      rewrite /myfiles/(.*) /$1 break;
+      proxy_pass http://your_s3_bucket.s3.amazonaws.com/$1;
 
       aws_access_key your_aws_access_key;
       aws_secret_key the_secret_associated_with_the_above_access_key;
