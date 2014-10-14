@@ -650,7 +650,7 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     v->len = ngx_strlen(signature);
     v->data = signature;
     v->valid = 1;
-    v->no_cacheable = 0;
+    v->no_cacheable = 1;
     v->not_found = 0;
     return NGX_OK;
 }
@@ -663,7 +663,7 @@ ngx_http_aws_auth_variable_date(ngx_http_request_t *r, ngx_http_variable_value_t
     v->len = ngx_cached_http_time.len;
     v->data = ngx_cached_http_time.data;
     v->valid = 1;
-    v->no_cacheable = 0;
+    v->no_cacheable = 1;
     v->not_found = 0;
     aws_conf = ngx_http_get_module_loc_conf(r, ngx_http_aws_auth_module);
     //get this varialbe enable add x-amz-date to sign
