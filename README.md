@@ -37,6 +37,12 @@ Implements proxying of authenticated requests to S3.
   }
 ```
 
+
+# Community
+
+Thr project uses google groups for discussions. The group name is nginx-aws-auth. You can visit the web forum [here](https://github.com/anomalizer/ngx_aws_auth)
+
+
 Request signing & Amazon Cloudfront Service
 -------------------------------------------
 
