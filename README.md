@@ -57,7 +57,9 @@ http://s3.amazonaws.com/doc/s3-developer-guide/RESTAuthentication.html
 
 Credits:
 ========
-Based on http://nginx.org/pipermail/nginx/2010-February/018583.html and suggestion of moving to variables rather than patching the proxy module.
+Original idea based on http://nginx.org/pipermail/nginx/2010-February/018583.html and suggestion of moving to variables rather than patching the proxy module.
+
+Subsequent contributions can be found in the commit logs of the project.
 
 License
 -------
