@@ -360,7 +360,7 @@ ngx_http_arg2(ngx_http_request_t *r, u_char *name, size_t len, ngx_str_t *value)
         if (ngx_strncasecmp(p, name, len) != 0) {
             continue;
         }
-        if (p == r->args.data || *(p - 1) == '&' || (p + len) == last || *(p + len) == '&' || *(p + len) == '=') {
+        if ((p == r->args.data || *(p - 1) == '&') && ((p + len) == last || *(p + len) == '&' || *(p + len) == '=')) {
             if ((p + len) < last && *(p + len) == '=') {
                 value->data = p + len + 1;
                 p = ngx_strlchr(p, last, '&');
