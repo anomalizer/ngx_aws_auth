@@ -408,17 +408,17 @@ ngx_http_aws_auth_get_canon_resource(ngx_http_request_t *r, ngx_str_t *retstr) {
         }
         c_args_len = c_args_cur - c_args;
         *c_args_cur = '\0';
-    } 
+    }
 
     uri_len = ngx_strlen(uri);
-    u_char *ret = ngx_palloc(r->pool, uri_len + aws_conf->s3_bucket.len + sizeof("/") + c_args_len + 1); 
-    u_char *cur = ret; 
-    cur = ngx_cpystrn(cur, (u_char *)"/", sizeof("/"));
+    u_char *ret = ngx_palloc(r->pool, uri_len + aws_conf->s3_bucket.len + sizeof("/") + c_args_len + 1);
+    u_char *cur = ret;
+    // cur = ngx_cpystrn(cur, (u_char *)"/", sizeof("/"));
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "bucket: %V", &aws_conf->s3_bucket);
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "uri:    %s", uri);
-    cur = ngx_cpystrn(cur, aws_conf->s3_bucket.data, aws_conf->s3_bucket.len + 1);
+    // cur = ngx_cpystrn(cur, aws_conf->s3_bucket.data, aws_conf->s3_bucket.len + 1);
     cur = ngx_cpystrn(cur, uri, uri_len + 1);
-      
+
     if ( c_args_len ) {
         ngx_memcpy(cur, c_args, c_args_len + 1);
         ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "args: %s", c_args);
