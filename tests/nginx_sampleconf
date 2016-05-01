@@ -1,0 +1,22 @@
+server {
+        listen       8000;
+        location /test1 {
+                proxy_pass http://precise64;
+                aws_access_key 4WLAD43EZZ64EPK1CIRO;
+                aws_secret_key uGA3yy/NJqITgERIVmr9AgUZRBqUjPADvfQoxpKL;
+                s3_bucket test1;
+                chop_prefix /test1;
+                proxy_set_header Authorization $s3_auth_token;
+        }
+        location / {
+                proxy_pass http://precise64/test1/;
+                aws_access_key 4WLAD43EZZ64EPK1CIRO;
+                aws_secret_key uGA3yy/NJqITgERIVmr9AgUZRBqUjPADvfQoxpKL;
+                s3_bucket test1;
+                chop_prefix /test1;
+                proxy_set_header Authorization $s3_auth_token;
+                proxy_set_header x-amz-date $aws_date;
+        }
+
+}
+

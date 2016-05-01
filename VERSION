@@ -1,0 +1,10 @@
+# Changelog
+
+## Version 1.1.1
+AWS dat header is computed unconditionallt. See #11
+
+## Version 1.1.0
+Extend functionality beyond simple GET. See #5
+
+## Version 1.0.0
+Start maintaining version numbers
