@@ -146,19 +146,14 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
             return NGX_HTTP_NOT_ALLOWED;
         }
 
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "About to generate signature");
-
         const ngx_array_t* headers_out = ngx_aws_auth__sign(r->pool, r,
             &conf->access_key, &conf->signing_key_decoded, &conf->key_scope, &conf->bucket_name);
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "Got signature");
 
         ngx_uint_t i;
         for(i = 0; i < headers_out->nelts; i++)
         {
             hv = (header_pair_t*)((u_char *) headers_out->elts + headers_out->size * i);
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+            ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                     "header name %s, value %s", hv->key.data, hv->value.data);
 
             h = ngx_list_push(&r->headers_in.headers);
