@@ -1,5 +1,9 @@
-AWS proxy module
-================
+# AWS proxy module
+
+This branch contains the legacy code based on the deprecated AWS V2 authentication protocol.
+The code here is well tested in production. You can find the experimental support for the
+V4 authentication protocol that will work with all new regions of AWS under the branch named
+*AuthV4*.
 
 Implements proxying of authenticated requests to S3.
 
