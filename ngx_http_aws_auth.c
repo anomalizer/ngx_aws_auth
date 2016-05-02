@@ -156,6 +156,12 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
             ngx_log_debug2(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                     "header name %s, value %s", hv->key.data, hv->value.data);
 
+            if(ngx_strncmp(hv->key.data, HOST_HEADER.data, hv->key.len) == 0) {
+                /* host header is controlled by proxy pass directive and hence
+                   cannot be set by our module */
+                continue;
+            }
+
             h = ngx_list_push(&r->headers_in.headers);
             if (h == NULL) {
                 return NGX_ERROR;
@@ -163,7 +169,7 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
 
             h->hash = 1;
             h->key = hv->key;
-            h->lowcase_key = hv->key.data; // TODO: enforce lower case
+            h->lowcase_key = hv->key.data; /* We ensure that header names are already lowercased */
             h->value = hv->value;
         }
     }
