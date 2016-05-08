@@ -88,14 +88,15 @@ static inline int ngx_aws_auth__cmp_hnames(const void *one, const void *two) {
 static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *pool,
 	const ngx_http_request_t *req) {
 	u_char *p, *ampersand, *equal, *last;
+	size_t i, len;
+	ngx_str_t *retval = ngx_palloc(pool, sizeof(ngx_str_t));
 
 	header_pair_t *qs_arg;
-	ngx_array_t *query_string_args = ngx_array_create(pool, 3, sizeof(header_pair_t));
+	ngx_array_t *query_string_args = ngx_array_create(pool, 0, sizeof(header_pair_t));
 
 	if (req->args.len == 0) {
 		return &EMPTY_STRING;
 	}
-	/* TODO: impl */
 
 	p = req->args.data;
 	last = p + req->args.len;
@@ -113,18 +114,46 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 			equal = ampersand;
 		}
 
-		qs_arg->key.data = p;
-		qs_arg->key.len = equal - p;
+		len = equal - p;
+		qs_arg->key.data = ngx_palloc(pool, len*3);
+		qs_arg->key.len = (u_char *)ngx_escape_uri(qs_arg->key.data, p, len, NGX_ESCAPE_ARGS) - qs_arg->key.data;
 
-		qs_arg->value.data = equal;
-		qs_arg->value.len = ampersand - equal;
+
+		len = ampersand - equal;
+		if(len > 0 ) {
+			qs_arg->value.data = ngx_palloc(pool, len*3);
+			qs_arg->value.len = (u_char *)ngx_escape_uri(qs_arg->value.data, equal+1, len-1, NGX_ESCAPE_ARGS) - qs_arg->value.data;
+		} else {
+			qs_arg->value = EMPTY_STRING;
+		}
 
 		p = ampersand;
 	}
+
 	ngx_qsort(query_string_args->elts, (size_t) query_string_args->nelts,
 		sizeof(header_pair_t), ngx_aws_auth__cmp_hnames);
 
-	return &EMPTY_STRING;
+	retval->data = ngx_palloc(pool, req->args.len*3 + query_string_args->nelts*2);
+	retval->len = 0;
+
+	for(i = 0; i < query_string_args->nelts; i++) {
+		qs_arg = &((header_pair_t*)query_string_args->elts)[i];
+
+		ngx_memcpy(retval->data + retval->len, qs_arg->key.data, qs_arg->key.len);
+		retval->len += qs_arg->key.len;
+
+		*(retval->data + retval->len) = '=';
+		retval->len++;
+
+		ngx_memcpy(retval->data + retval->len, qs_arg->value.data, qs_arg->value.len);
+		retval->len += qs_arg->value.len;
+
+		*(retval->data + retval->len) = '&';
+		retval->len++;
+	}
+	retval->len--;
+
+	return retval;
 }
 
 
