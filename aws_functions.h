@@ -244,7 +244,16 @@ static inline const ngx_str_t* ngx_aws_auth__request_body_hash(ngx_pool_t *pool,
 }
 
 static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const ngx_http_request_t *req) {
-	return &req->uri; // TODO: handle cases involving either query string or encoded url path
+	ngx_str_t *retval;
+
+	if(req->args.len == 0) {
+		return &req->uri;
+	} else {
+		retval = ngx_palloc(pool, sizeof(ngx_str_t));
+		retval->data = req->uri_start;
+		retval->len = req->args_start - req->uri_start;
+		return retval;
+	}
 }
 
 static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_request(ngx_pool_t *pool,
