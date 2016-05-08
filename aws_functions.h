@@ -72,9 +72,58 @@ static inline const ngx_str_t* ngx_aws_auth__compute_request_time(ngx_pool_t *po
 	return retval;
 }
 
+static inline int ngx_aws_auth__cmp_hnames(const void *one, const void *two) {
+    header_pair_t *first, *second;
+    int ret;
+    first  = (header_pair_t *) one;
+    second = (header_pair_t *) two;
+    ret = ngx_strncmp(first->key.data, second->key.data, ngx_min(first->key.len, second->key.len));
+    if (ret != 0){
+        return ret;
+    } else {
+        return (first->key.len - second->key.len);
+    }
+}
+
 static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *pool,
 	const ngx_http_request_t *req) {
+	u_char *p, *ampersand, *equal, *last;
+
+	header_pair_t *qs_arg;
+	ngx_array_t *query_string_args = ngx_array_create(pool, 3, sizeof(header_pair_t));
+
+	if (req->args.len == 0) {
+		return &EMPTY_STRING;
+	}
 	/* TODO: impl */
+
+	p = req->args.data;
+	last = p + req->args.len;
+
+	for ( /* void */ ; p < last; p++) {
+		qs_arg = ngx_array_push(query_string_args);
+
+		ampersand = ngx_strlchr(p, last, '&');
+		if (ampersand == NULL) {
+			ampersand = last;
+		}
+
+		equal = ngx_strlchr(p, last, '=');
+		if ((equal == NULL) || (equal > ampersand)) {
+			equal = ampersand;
+		}
+
+		qs_arg->key.data = p;
+		qs_arg->key.len = equal - p;
+
+		qs_arg->value.data = equal;
+		qs_arg->value.len = ampersand - equal;
+
+		p = ampersand;
+	}
+	ngx_qsort(query_string_args->elts, (size_t) query_string_args->nelts,
+		sizeof(header_pair_t), ngx_aws_auth__cmp_hnames);
+
 	return &EMPTY_STRING;
 }
 
@@ -91,19 +140,6 @@ static inline const ngx_str_t* ngx_aws_auth__host_from_bucket(ngx_pool_t *pool,
 	host->len = strnlen(__CONST_CHAR_PTR_U(host->data), host->len);
 
 	return host;
-}
-
-static inline int ngx_aws_auth__cmp_hnames(const void *one, const void *two) {
-    header_pair_t *first, *second;
-    int ret;
-    first  = (header_pair_t *) one;
-    second = (header_pair_t *) two;
-    ret = ngx_strncmp(first->key.data, second->key.data, ngx_min(first->key.len, second->key.len));
-    if (ret != 0){
-        return ret;
-    } else {
-        return (first->key.len - second->key.len);
-    }
 }
 
 static inline struct AwsCanonicalHeaderDetails ngx_aws_auth__canonize_headers(ngx_pool_t *pool,

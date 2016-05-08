@@ -123,6 +123,7 @@ static void canonical_request_sans_qs(void **state) {
 
 	request.uri = url;
 	request.method_name = method;
+	request.args = EMPTY_STRING;
 
 	result = ngx_aws_auth__make_canonical_request(pool, &request, &bucket, &aws_date);
 	assert_string_equal(result.canon_request->data, "GET\n\
@@ -150,6 +151,7 @@ static void basic_get_signature(void **state) {
 	request.start_sec = 1440938160; /* 20150830T123600Z */
 	request.uri = url;
 	request.method_name = method;
+	request.args = EMPTY_STRING;
 
 	signing_key.len = 64;
 	signing_key.data = ngx_palloc(pool, signing_key.len );
