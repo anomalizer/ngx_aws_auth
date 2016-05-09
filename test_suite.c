@@ -150,6 +150,42 @@ static void canonical_qs_subrequest(void **state) {
     assert_memory_equal(canon_qs->data, "acl=", canon_qs->len);
 }
 
+static void canonical_url_sans_qs(void **state) {
+    (void) state; /* unused */
+
+	ngx_http_request_t request;
+	ngx_str_t url = ngx_string("foo.php");
+	request.uri = url;
+	request.uri_start = request.uri.data;
+	request.args_start = url.data + url.len;
+	request.args = EMPTY_STRING;
+
+	const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
+    assert_int_equal(canon_url->len, url.len);
+    assert_memory_equal(canon_url->data, url.data, canon_url->len);
+}
+
+static void canonical_url_with_qs(void **state) {
+    (void) state; /* unused */
+
+	ngx_http_request_t request;
+	ngx_str_t url = ngx_string("foo.php?arg1=var1");
+	ngx_str_t curl = ngx_string("foo.php");
+
+	ngx_str_t args;
+	args.data = url.data+8;
+	args.len =9;
+
+	request.uri = url;
+	request.uri_start = request.uri.data;
+	request.args_start = url.data + 8;
+	request.args = args;
+
+	const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
+    assert_int_equal(canon_url->len, curl.len);
+    assert_memory_equal(canon_url->data, curl.data, canon_url->len);
+}
+
 static void canonical_request_sans_qs(void **state) {
     (void) state; /* unused */
 	const ngx_str_t bucket = ngx_string("example");
@@ -214,6 +250,8 @@ int main() {
         cmocka_unit_test(canonical_qs_single_arg),
         cmocka_unit_test(canonical_qs_two_arg_reverse),
         cmocka_unit_test(canonical_qs_subrequest),
+        cmocka_unit_test(canonical_url_sans_qs),
+        cmocka_unit_test(canonical_url_with_qs),
         cmocka_unit_test(signed_headers),
         cmocka_unit_test(canonical_request_sans_qs),
         cmocka_unit_test(basic_get_signature),

@@ -251,7 +251,7 @@ static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const n
 	} else {
 		retval = ngx_palloc(pool, sizeof(ngx_str_t));
 		retval->data = req->uri_start;
-		retval->len = req->args_start - req->uri_start;
+		retval->len = req->args_start - req->uri_start - 1;
 		return retval;
 	}
 }
