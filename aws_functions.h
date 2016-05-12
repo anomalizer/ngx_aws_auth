@@ -153,8 +153,10 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 	}
 	retval->len--;
 
+
 	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
 				  "canonical qs constructed is %V", retval);
+
 	return retval;
 }
 
@@ -167,8 +169,7 @@ static inline const ngx_str_t* ngx_aws_auth__host_from_bucket(ngx_pool_t *pool,
 	host = ngx_palloc(pool, sizeof(ngx_str_t));
 	host->len = s3_bucket->len + sizeof(HOST_PATTERN) + 1;
 	host->data = ngx_palloc(pool, host->len);
-	ngx_snprintf(host->data, host->len, "%V%s", s3_bucket, HOST_PATTERN);
-	host->len = strnlen(__CONST_CHAR_PTR_U(host->data), host->len);
+	host->len = ngx_snprintf(host->data, host->len, "%V%s", s3_bucket, HOST_PATTERN) - host->data;
 
 	return host;
 }
@@ -249,15 +250,19 @@ static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const n
 	ngx_str_t *retval;
 
 	if(req->args.len == 0) {
+
         ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
                       "canonical url extracted is %V", &req->uri);
+
 		return &req->uri;
 	} else {
 		retval = ngx_palloc(pool, sizeof(ngx_str_t));
 		retval->data = req->uri_start;
 		retval->len = req->args_start - req->uri_start - 1;
+
         ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
                       "canonical url extracted is %V", retval);
+
 		return retval;
 	}
 }
@@ -281,17 +286,17 @@ static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_req
 	const ngx_str_t *url = ngx_aws_auth__canon_url(pool, req);
 
 	retval.canon_request = ngx_palloc(pool, sizeof(ngx_str_t));
-	retval.canon_request->data = ngx_palloc(pool, 10000);
 	retval.canon_request->len = 10000;
+	retval.canon_request->data = ngx_palloc(pool, retval.canon_request->len);
 
-	ngx_snprintf(retval.canon_request->data, retval.canon_request->len, "%V\n%V\n%V\n%V\n%V\n%V",
+	retval.canon_request->len = ngx_snprintf(retval.canon_request->data, retval.canon_request->len, "%V\n%V\n%V\n%V\n%V\n%V",
 		http_method, url, canon_qs, canon_headers.canon_header_str,
-		canon_headers.signed_header_names, request_body_hash);
-	retval.canon_request->len = strnlen(__CONST_CHAR_PTR_U(retval.canon_request->data), retval.canon_request->len);
+		canon_headers.signed_header_names, request_body_hash) - retval.canon_request->data;
 	retval.header_list = canon_headers.header_list;
 
 	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
 				  "canonical req is %V", retval.canon_request);
+
 	return retval;
 }
 
@@ -299,11 +304,10 @@ static inline const ngx_str_t* ngx_aws_auth__string_to_sign(ngx_pool_t *pool,
 		const ngx_str_t *key_scope,	const ngx_str_t *date, const ngx_str_t *canon_request_hash) {
 	ngx_str_t *retval = ngx_palloc(pool, sizeof(ngx_str_t));
 
-	retval->data = ngx_palloc(pool, STRING_TO_SIGN_LENGTH);
 	retval->len = STRING_TO_SIGN_LENGTH;
-	ngx_snprintf(retval->data, retval->len, "AWS4-HMAC-SHA256\n%V\n%V\n%V",
-		date, key_scope, canon_request_hash);
-	retval->len = strnlen(__CONST_CHAR_PTR_U(retval->data), retval->len);
+	retval->data = ngx_palloc(pool, retval->len);
+	retval->len = ngx_snprintf(retval->data, retval->len, "AWS4-HMAC-SHA256\n%V\n%V\n%V",
+		date, key_scope, canon_request_hash) - retval->data ;
 
 	return retval;
 }
@@ -319,9 +323,8 @@ static inline const ngx_str_t* ngx_aws_auth__make_auth_token(ngx_pool_t *pool,
 	authz->len = access_key_id->len + key_scope->len + signed_header_names->len
 		+ signature->len + sizeof(FMT_STRING);
 	authz->data = ngx_palloc(pool, authz->len);
-    ngx_snprintf(authz->data, authz->len, FMT_STRING,
-		access_key_id, key_scope, signed_header_names, signature);
-	authz->len = strnlen(__CONST_CHAR_PTR_U(authz->data), authz->len);
+    authz->len = ngx_snprintf(authz->data, authz->len, FMT_STRING,
+		access_key_id, key_scope, signed_header_names, signature) - authz->data;
 	return authz;
 }
 

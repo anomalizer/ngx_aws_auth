@@ -7,6 +7,11 @@
 
 ngx_pool_t *pool;
 
+static void assert_ngx_string_equal(ngx_str_t a, ngx_str_t b) {
+	int len = a.len < b.len ?  a.len : b.len;
+    assert_memory_equal(a.data, b.data, len);
+}
+
 static void null_test_success(void **state) {
     (void) state; /* unused */
 }
@@ -117,7 +122,7 @@ static void canonical_qs_empty(void **state) {
 	request.args = EMPTY_STRING;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
-    assert_memory_equal(canon_qs->data, EMPTY_STRING.data, canon_qs->len);
+    assert_ngx_string_equal(*canon_qs, EMPTY_STRING);
 }
 
 static void canonical_qs_single_arg(void **state) {
@@ -127,27 +132,29 @@ static void canonical_qs_single_arg(void **state) {
 	request.args = args;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
-    assert_memory_equal(canon_qs->data, args.data, canon_qs->len);
+    assert_ngx_string_equal(*canon_qs, args);
 }
 
 static void canonical_qs_two_arg_reverse(void **state) {
     (void) state; /* unused */
 	ngx_http_request_t request;
 	ngx_str_t args = ngx_string("brg1=val2&arg1=val1");
+	ngx_str_t cargs = ngx_string("arg1=val1&brg1=val");
 	request.args = args;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
-    assert_memory_equal(canon_qs->data, "arg1=val1&brg1=val2", canon_qs->len);
+    assert_ngx_string_equal(*canon_qs, cargs);
 }
 
 static void canonical_qs_subrequest(void **state) {
     (void) state; /* unused */
 	ngx_http_request_t request;
 	ngx_str_t args = ngx_string("acl");
+	ngx_str_t cargs = ngx_string("acl=");
 	request.args = args;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
-    assert_memory_equal(canon_qs->data, "acl=", canon_qs->len);
+    assert_ngx_string_equal(*canon_qs, cargs);
 }
 
 static void canonical_url_sans_qs(void **state) {
@@ -162,7 +169,7 @@ static void canonical_url_sans_qs(void **state) {
 
 	const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
     assert_int_equal(canon_url->len, url.len);
-    assert_memory_equal(canon_url->data, url.data, canon_url->len);
+    assert_ngx_string_equal(*canon_url, url);
 }
 
 static void canonical_url_with_qs(void **state) {
@@ -183,7 +190,7 @@ static void canonical_url_with_qs(void **state) {
 
 	const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
     assert_int_equal(canon_url->len, curl.len);
-    assert_memory_equal(canon_url->data, curl.data, canon_url->len);
+    assert_ngx_string_equal(*canon_url, curl);
 }
 
 static void canonical_request_sans_qs(void **state) {
