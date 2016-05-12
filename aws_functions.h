@@ -153,6 +153,8 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 	}
 	retval->len--;
 
+	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
+				  "canonical qs constructed is %V", retval);
 	return retval;
 }
 
@@ -247,11 +249,15 @@ static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const n
 	ngx_str_t *retval;
 
 	if(req->args.len == 0) {
+        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
+                      "canonical url extracted is %V", &req->uri);
 		return &req->uri;
 	} else {
 		retval = ngx_palloc(pool, sizeof(ngx_str_t));
 		retval->data = req->uri_start;
 		retval->len = req->args_start - req->uri_start - 1;
+        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
+                      "canonical url extracted is %V", retval);
 		return retval;
 	}
 }
@@ -284,6 +290,8 @@ static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_req
 	retval.canon_request->len = strnlen(__CONST_CHAR_PTR_U(retval.canon_request->data), retval.canon_request->len);
 	retval.header_list = canon_headers.header_list;
 
+	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
+				  "canonical req is %V", retval.canon_request);
 	return retval;
 }
 

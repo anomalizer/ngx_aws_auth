@@ -63,8 +63,9 @@ Generate AWS S3 signing key in it's base64 encoded form
 
 optional arguments:
   -h, --help            show this help message and exit
-  -k ACCESS_KEY, --access-key ACCESS_KEY
-                        The secret access key generated using AWS IAM
+  -k SECRET_KEY, --secret-key SECRET_KEY
+                        The secret key generated using AWS IAM. Do not confuse
+                        this with the access key id
   -r REGION, --region REGION
                         The AWS region where this key would be used. Example:
                         us-east-1

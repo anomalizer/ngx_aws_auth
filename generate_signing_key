@@ -46,7 +46,7 @@ if __name__ == "__main__":
             print('The auto-selected service is %s' % service,  file=sys.stderr)
 
     region = args.region
-    signature = getSignatureKey(args.access_key, ymd, region, service)
+    signature = getSignatureKey(args.secret_key, ymd, region, service)
 
     if args.no_base64:
         signature = signature.decode('latin_1')
