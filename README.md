@@ -1,9 +1,13 @@
 # AWS proxy module
 
-This branch contains the legacy code based on the deprecated AWS V2 authentication protocol.
-The code here is well tested in production. You can find the experimental support for the
-V4 authentication protocol that will work with all new regions of AWS under the branch named
-*AuthV4*.
+This nginx module can proxy requests to authenticated S3 backends using Amazon's
+V4 authentication API. The first version of this module was written for the V2
+authentication protocol and can be found in the *AuthV2* branch.
+
+## License
+This project uses the same license as ngnix does i.e. the 2 clause BSD / simplified BSD / FreeBSD license
+
+## Usage example
 
 Implements proxying of authenticated requests to S3.
 
@@ -11,15 +15,14 @@ Implements proxying of authenticated requests to S3.
   server {
     listen     8000;
 
+    aws_access_key your_aws_access_key;
+    aws_key_scope scope_of_generated_signing_key;
+    aws_signing_key signing_key_generated_using_script;
+	aws_s3_bucket your_s3_bucket;
+
     location / {
+	  aws_sign;
       proxy_pass http://your_s3_bucket.s3.amazonaws.com;
-
-      aws_access_key your_aws_access_key;
-      aws_secret_key the_secret_associated_with_the_above_access_key;
-      s3_bucket your_s3_bucket;
-
-      proxy_set_header Authorization $s3_auth_token;
-      proxy_set_header x-amz-date $aws_date;
     }
 
     # This is an example that does not use the server root for the proxy root
@@ -28,49 +31,66 @@ Implements proxying of authenticated requests to S3.
       rewrite /myfiles/(.*) /$1 break;
       proxy_pass http://your_s3_bucket.s3.amazonaws.com/$1;
 
+
       aws_access_key your_aws_access_key;
-      aws_secret_key the_secret_associated_with_the_above_access_key;
-      s3_bucket your_s3_bucket;
-      chop_prefix /myfiles; # Take out this part of the URL before signing it, since '/myfiles' will not be part of the URI sent to Amazon  
-
-
-      proxy_set_header Authorization $s3_auth_token;
-      proxy_set_header x-amz-date $aws_date;
+      aws_key_scope scope_of_generated_signing_key;
+      aws_signing_key signing_key_generated_using_script;
     }
 
   }
 ```
 
+## Security considerations
+The V4 protocol does not need access to the actual secret keys that one obtains 
+from the IAM service. The correct way to use the IAM key is to actually generate
+a scoped signing key and use this signing key to access S3. This nginx module
+requires the signing key and not the actual secret key. It is an insecure practise
+to let the secret key reside on your nginx server.
 
-# Community
+Note that signing keys have a validity of just one week. Hence, they need to
+be refreshed constantly. Please useyour favourite configuration management
+system such as saltstack, puppet, chef, etc. etc. to distribute the signing
+keys to your nginx clusters. Do not forget to HUP the server after placing the new
+signing key as nginx reads the configuration only at startup time.
+
+A standalone python script has been provided to generate the signing key
+```
+./generate_signing_key -h
+usage: generate_signing_key [-h] -k ACCESS_KEY -r REGION [-s SERVICE]
+                            [-d DATE] [--no-base64] [-v]
+
+Generate AWS S3 signing key in it's base64 encoded form
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -k SECRET_KEY, --secret-key SECRET_KEY
+                        The secret key generated using AWS IAM. Do not confuse
+                        this with the access key id
+  -r REGION, --region REGION
+                        The AWS region where this key would be used. Example:
+                        us-east-1
+  -s SERVICE, --service SERVICE
+                        The AWS service for which this key would be used.
+                        Example: s3
+  -d DATE, --date DATE  The date on which this key is generated in yyyymmdd
+                        format
+  --no-base64           Disable output as a base64 encoded string. This NOT
+                        recommended
+  -v, --verbose         Produce verbose output on stderr
+
+```
+
+## Known limitations
+The 2.x version of the module currently only has support for GET and HEAD calls. This is because
+signing request body is complex and has not yet been implemented.
+
+
+## Community
 
 The project uses google groups for discussions. The group name is nginx-aws-auth. You can visit the web forum [here](https://groups.google.com/forum/#!forum/nginx-aws-auth)
 
 
-Request signing & Amazon Cloudfront Service
--------------------------------------------
-
-
-If Nginx is behind Amazon's CloudFront CDN service, you need to add this setting : 
-
-```nginx
-proxy_set_header x-amz-cf-id "";
-```
-
-into nginx.conf in order to clear X-Amz-Cf-Id header before signing the request to Amazon S3 bucket.
-
-
-More info here : 
-
-http://s3.amazonaws.com/doc/s3-developer-guide/RESTAuthentication.html
-
-
-Credits:
-========
+## Credits
 Original idea based on http://nginx.org/pipermail/nginx/2010-February/018583.html and suggestion of moving to variables rather than patching the proxy module.
 
 Subsequent contributions can be found in the commit logs of the project.
-
-License
--------
-This project uses the same license as ngnix does i.e. the 2 clause BSD / simplified BSD / FreeBSD license

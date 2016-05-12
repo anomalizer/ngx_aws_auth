@@ -1,5 +1,8 @@
 # Changelog
 
+## Version 2.0.0
+Move to AWS V4 signatures
+
 ## Version 1.1.1
 AWS dat header is computed unconditionallt. See #11
 
