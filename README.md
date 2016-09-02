@@ -15,9 +15,9 @@ Implements proxying of authenticated requests to S3.
   server {
     listen     8000;
 
-    aws_access_key your_aws_access_key;
-    aws_key_scope scope_of_generated_signing_key;
-    aws_signing_key signing_key_generated_using_script;
+    aws_access_key your_aws_access_key; # Example AKIDEXAMPLE
+    aws_key_scope scope_of_generated_signing_key; #Example 20150830/us-east-1/service/aws4_request
+    aws_signing_key signing_key_generated_using_script; #Example L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
 	aws_s3_bucket your_s3_bucket;
 
     location / {
@@ -77,6 +77,11 @@ optional arguments:
   --no-base64           Disable output as a base64 encoded string. This NOT
                         recommended
   -v, --verbose         Produce verbose output on stderr
+
+
+./generate_signing_key -k wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY -r us-east-1
+L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
+20160902/us-east-1/s3/aws4_request
 
 ```
 
