@@ -37,6 +37,18 @@ Implements proxying of authenticated requests to S3.
       aws_signing_key signing_key_generated_using_script;
     }
 
+    # This is an example that use specific s3 endpoint, default endpoint is s3.amazonaws.com
+	location /s3_beijing {
+	
+      rewrite /s3_beijing/(.*) /$1 break;
+      proxy_pass http://your_s3_bucket.s3.cn-north-1.amazonaws.com.cn/$1;
+
+      aws_sign;
+      aws_endpoint "s3.cn-north-1.amazonaws.com.cn";
+      aws_access_key your_aws_access_key;
+      aws_key_scope scope_of_generated_signing_key;
+      aws_signing_key signing_key_generated_using_script;
+    }
   }
 ```
 
