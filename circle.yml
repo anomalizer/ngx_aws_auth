@@ -1,0 +1,27 @@
+dependencies:
+
+   override:
+    - apt-get -y install curl build-essential libpcre3 libpcre3-dev zlib1g-dev libssl-dev git 
+    - curl -LO http://nginx.org/download/nginx-1.11.4.tar.gz
+    - tar zxf nginx-1.11.4.tar.gz 
+    - cd nginx-1.11.4
+    - git clone https://github.com/amaline/ngx_aws_auth.git
+    - ./configure --with-http_ssl_module --add-module=ngx_aws_auth
+    - make install
+    - cd /tmp
+    - rm -f nginx-1.11.4.tar.gz
+    - rm -rf nginx-1.11.4
+    - apt-get purge -y curl git
+    - apt-get autoremove -y
+
+
+test:
+  override:
+     - echo test
+
+
+deployment:
+  hub:
+    branch: master
+    commands:
+       - echo deploy
