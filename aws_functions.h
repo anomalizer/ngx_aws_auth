@@ -249,23 +249,31 @@ static inline const ngx_str_t* ngx_aws_auth__request_body_hash(ngx_pool_t *pool,
 
 static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const ngx_http_request_t *req) {
 	ngx_str_t *retval;
+	uintptr_t escape;
+	char *dst;
 
+    escape = ngx_escape_uri(NULL,req->uri.data,req->uri.len,NGX_ESCAPE_URI);
 	if(req->args.len == 0) {
-
-        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-                      "canonical url extracted is %V", &req->uri);
-
-		return &req->uri;
+        
+        if (escape == req->uri.len) {
+	        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
+	                      "canonical url extracted is %V", &req->uri);
+	
+			return &req->uri;
+		} else {
+		    retval	= ngx_palloc(pool, sizeof(ngx_str_t));
+		    dst 	= ngx_palloc(r->pool,escape); 
+			retval->data = (u_char*) ngx_escape_uri(dst,req->uri.data, req->uri.len, NGX_ESCAPE_URI);
+			retval->len=escape;
+		}
 	} else {
 		retval = ngx_palloc(pool, sizeof(ngx_str_t));
 		retval->data = req->uri_start;
 		retval->len = req->args_start - req->uri_start - 1;
-
-        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-                      "canonical url extracted is %V", retval);
-
-		return retval;
 	}
+	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
+             "canonical url extracted is [%V]", retval);
+	return retval;
 }
 
 static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_request(ngx_pool_t *pool,
