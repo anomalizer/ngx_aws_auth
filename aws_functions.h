@@ -250,29 +250,50 @@ static inline const ngx_str_t* ngx_aws_auth__request_body_hash(ngx_pool_t *pool,
 static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const ngx_http_request_t *req) {
 	ngx_str_t *retval;
 	uintptr_t escape;
-	char *dst;
+	u_int newLength;
+	u_char *dst;
 
+    ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,"Number of args=%d",req->args.len);
     escape = ngx_escape_uri(NULL,req->uri.data,req->uri.len,NGX_ESCAPE_URI);
+    newLength=req->uri.len + escape*2;
+    ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,"URI Length=%d, Number of escaped chars=%d, Escaped len=%d",req->uri.len,escape,newLength);
+    
 	if(req->args.len == 0) {
         
-        if (escape == req->uri.len) {
-	        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-	                      "canonical url extracted is %V", &req->uri);
+        if (escape == 0) {
+	        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0, "a) canonical url extracted is %V", &req->uri);
 	
 			return &req->uri;
 		} else {
-		    retval	= ngx_palloc(pool, sizeof(ngx_str_t));
-		    dst 	= ngx_palloc(r->pool,escape); 
-			retval->data = (u_char*) ngx_escape_uri(dst,req->uri.data, req->uri.len, NGX_ESCAPE_URI);
-			retval->len=escape;
+		    retval	= ngx_palloc(pool,sizeof(ngx_str_t));
+		    dst 	= ngx_palloc(pool,newLength); 
+			ngx_escape_uri(dst,req->uri.data, req->uri.len, NGX_ESCAPE_URI);
+			retval->data=dst;
+			retval->len=newLength;
+			ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,"b) canonical url extracted is [%V]", retval);
 		}
 	} else {
-		retval = ngx_palloc(pool, sizeof(ngx_str_t));
-		retval->data = req->uri_start;
-		retval->len = req->args_start - req->uri_start - 1;
+	    retval = ngx_palloc(pool, sizeof(ngx_str_t));
+	    retval->len = req->args_start - req->uri_start - 1;
+	    
+	    if (escape == 0) {
+		    retval->data = req->uri_start;
+		    ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,"c) canonical url extracted is [%V]", retval);
+		} else {
+		    escape = ngx_escape_uri(NULL,req->uri_start,retval->len,NGX_ESCAPE_URI);
+		    
+		    newLength=retval->len + escape*2;
+		    
+		    dst 	= ngx_palloc(pool,newLength);
+		    ngx_escape_uri(dst,req->uri_start,retval->len, NGX_ESCAPE_URI);
+			retval->data=dst;
+			retval->len=newLength;
+			ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,"d) canonical url extracted is [%V]", retval);
+		}
+		
 	}
-	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-             "canonical url extracted is [%V]", retval);
+	
+	
 	return retval;
 }
 
