@@ -188,8 +188,8 @@ static void canonical_url_with_qs(void **state) {
 	ngx_str_t curl = ngx_string("foo.php");
 
 	ngx_str_t args;
-	args.data = url.data+8;
-	args.len =9;
+	args.data = url.data + 8;
+	args.len = 9;
 
 	request.uri = url;
 	request.uri_start = request.uri.data;
@@ -200,6 +200,24 @@ static void canonical_url_with_qs(void **state) {
 	const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
     assert_int_equal(canon_url->len, curl.len);
     assert_ngx_string_equal(*canon_url, curl);
+}
+
+static void canonical_url_with_special_chars(void **state) {
+  (void) state; /* unused */
+
+  ngx_str_t url = ngx_string("f&o@o/bar.php");
+  ngx_str_t expected_canon_url = ngx_string("f%26o%40o/bar.php");
+
+  ngx_http_request_t request;
+  request.uri = url;
+  request.uri_start = request.uri.data;
+  request.args_start = url.data + url.len;
+  request.args = EMPTY_STRING;
+  request.connection = NULL;
+
+  const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
+    assert_int_equal(canon_url->len, expected_canon_url.len);
+    assert_ngx_string_equal(*canon_url, expected_canon_url);
 }
 
 static void canonical_request_sans_qs(void **state) {
@@ -257,7 +275,6 @@ static void basic_get_signature(void **state) {
 	assert_string_equal(result.signature->data, "4ed4ec875ff02e55c7903339f4f24f8780b986a9cc9eff03f324d31da6a57690");
 }
 
-
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(null_test_success),
@@ -272,6 +289,7 @@ int main() {
         cmocka_unit_test(canonical_qs_subrequest),
         cmocka_unit_test(canonical_url_sans_qs),
         cmocka_unit_test(canonical_url_with_qs),
+        cmocka_unit_test(canonical_url_with_special_chars),
         cmocka_unit_test(signed_headers),
         cmocka_unit_test(canonical_request_sans_qs),
         cmocka_unit_test(basic_get_signature),

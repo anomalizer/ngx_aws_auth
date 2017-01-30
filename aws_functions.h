@@ -252,22 +252,87 @@ static inline const ngx_str_t* ngx_aws_auth__request_body_hash(ngx_pool_t *pool,
 	return &EMPTY_STRING_SHA256;
 }
 
+// AWS wants a peculiar kind of URI-encoding: they want RFC 3986, except that
+// slashes shouldn't be encoded...
+// this function is a light wrapper around ngx_escape_uri that does exactly that
+// modifies the source in place if it needs to be escaped
+// see http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
+static inline void ngx_aws_auth__escape_uri(ngx_pool_t *pool, ngx_str_t* src) {
+  u_char *escaped_data, *escaped_data_with_slashes;
+  u_int escaped_data_len, escaped_data_with_slashes_len, i, j;
+  uintptr_t escaped_count, slashes_count = 0;
+
+  // first, we need to know how many characters need to be escaped
+  escaped_count = ngx_escape_uri(NULL, src->data, src->len, NGX_ESCAPE_URI_COMPONENT);
+  // except slashes should not be escaped...
+  if (escaped_count > 0) {
+    for (i = 0; i < src->len; i++) {
+      if (src->data[i] == '/') {
+        slashes_count++;
+      }
+    }
+  }
+
+  if (escaped_count == slashes_count) {
+    // nothing to do! nothing but slashes escaped (if even that)
+    return;
+  }
+
+  // each escaped character is replaced by 3 characters
+  escaped_data_len = src->len + escaped_count * 2;
+  escaped_data = ngx_palloc(pool, escaped_data_len);
+  ngx_escape_uri(escaped_data, src->data, src->len, NGX_ESCAPE_URI_COMPONENT);
+
+  // now we need to go back and re-replace each occurrence of %2F with a slash
+  escaped_data_with_slashes_len = src->len + (escaped_count - slashes_count) * 2;
+  if (slashes_count > 0) {
+    escaped_data_with_slashes = ngx_palloc(pool, escaped_data_with_slashes_len);
+
+    for (i = 0, j = 0; i < escaped_data_with_slashes_len; i++) {
+      if (j < escaped_data_len - 2 && strncmp((char*) (escaped_data + j), "%2F", 3) == 0) {
+        escaped_data_with_slashes[i] = '/';
+        j += 3;
+      } else {
+        escaped_data_with_slashes[i] = escaped_data[j];
+        j++;
+      }
+    }
+
+    src->data = escaped_data_with_slashes;
+    src->len = escaped_data_with_slashes_len;
+  } else {
+    // no slashes
+    src->data = escaped_data;
+    src->len = escaped_data_len;
+  }
+}
+
 static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const ngx_http_request_t *req) {
 	ngx_str_t *retval;
+  const u_char *req_uri_data;
+  u_int req_uri_len;
 
-	if(req->args.len == 0) {
-    safe_ngx_log_error(req, "canonical url extracted is %V", &req->uri);
+  if(req->args.len == 0) {
+    req_uri_data = req->uri.data;
+    req_uri_len = req->uri.len;
+  } else {
+    req_uri_data = req->uri_start;
+    req_uri_len = req->args_start - req->uri_start - 1;
+  }
 
-		return &req->uri;
-	} else {
-		retval = ngx_palloc(pool, sizeof(ngx_str_t));
-		retval->data = req->uri_start;
-		retval->len = req->args_start - req->uri_start - 1;
+  // we need to copy that data to not modify the request for other modules
+  retval = ngx_palloc(pool, sizeof(ngx_str_t));
+  retval->data = ngx_palloc(pool, req_uri_len);
+  ngx_memcpy(retval->data, req_uri_data, req_uri_len);
+  retval->len = req_uri_len;
 
-    safe_ngx_log_error(req, "canonical url extracted is %V", retval);
+  safe_ngx_log_error(req, "canonical url extracted before URI encoding is %V", retval);
 
-		return retval;
-	}
+  // then URI-encode it per RFC 3986
+  ngx_aws_auth__escape_uri(pool, retval);
+  safe_ngx_log_error(req, "canonical url extracted after URI encoding is %V", retval);
+
+  return retval;
 }
 
 static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_request(ngx_pool_t *pool,
