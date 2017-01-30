@@ -1,0 +1,22 @@
+language: c
+
+env:
+  matrix:
+    # one separate build per nginx version
+    - NGINX_VERSION=1.11.9
+    - NGINX_VERSION=1.10.2
+    - NGINX_VERSION=1.8.1
+  global:
+    - NGX_PATH=~/nginx
+    - LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
+
+sudo: true
+
+before_install:
+  - sudo apt-get install libpcre3 libpcre3-dev zlib1g-dev libssl-dev
+  - cd && wget https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz && tar -xvzf nginx-$NGINX_VERSION.tar.gz && ln -s nginx-$NGINX_VERSION $NGX_PATH
+  - cd $NGX_PATH && ./configure --with-http_ssl_module --add-module=$TRAVIS_BUILD_DIR
+  - cd $TRAVIS_BUILD_DIR && make nginx
+
+script:
+  - make test

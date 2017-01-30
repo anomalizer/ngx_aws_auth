@@ -53,6 +53,13 @@ struct AwsSignedRequestDetails {
 	ngx_array_t *header_list; // list of header_pair_t
 };
 
+// mainly useful to avoid having to full instantiate request structures for
+// tests...
+#define safe_ngx_log_error(req, ...)                                  \
+  if (req->connection) {                                              \
+    ngx_log_error(NGX_LOG_ERR, req->connection->log, 0, __VA_ARGS__); \
+  }
+
 static const ngx_str_t EMPTY_STRING_SHA256 = ngx_string("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 static const ngx_str_t EMPTY_STRING = ngx_null_string;
 static const ngx_str_t AMZ_HASH_HEADER = ngx_string("x-amz-content-sha256");
@@ -153,9 +160,7 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 	}
 	retval->len--;
 
-
-	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-				  "canonical qs constructed is %V", retval);
+  safe_ngx_log_error(req, "canonical qs constructed is %V", retval);
 
 	return retval;
 }
@@ -251,9 +256,7 @@ static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const n
 	ngx_str_t *retval;
 
 	if(req->args.len == 0) {
-
-        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-                      "canonical url extracted is %V", &req->uri);
+    safe_ngx_log_error(req, "canonical url extracted is %V", &req->uri);
 
 		return &req->uri;
 	} else {
@@ -261,8 +264,7 @@ static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const n
 		retval->data = req->uri_start;
 		retval->len = req->args_start - req->uri_start - 1;
 
-        ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-                      "canonical url extracted is %V", retval);
+    safe_ngx_log_error(req, "canonical url extracted is %V", retval);
 
 		return retval;
 	}
@@ -295,8 +297,7 @@ static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_req
 		canon_headers.signed_header_names, request_body_hash) - retval.canon_request->data;
 	retval.header_list = canon_headers.header_list;
 
-	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0,
-				  "canonical req is %V", retval.canon_request);
+  safe_ngx_log_error(req, "canonical req is %V", retval.canon_request);
 
 	return retval;
 }
