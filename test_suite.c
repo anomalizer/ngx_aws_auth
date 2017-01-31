@@ -205,8 +205,8 @@ static void canonical_url_with_qs(void **state) {
 static void canonical_url_with_special_chars(void **state) {
   (void) state; /* unused */
 
-  ngx_str_t url = ngx_string("f&o@o/bar.php");
-  ngx_str_t expected_canon_url = ngx_string("f%26o%40o/bar.php");
+  ngx_str_t url = ngx_string("f&o@o/b ar.php");
+  ngx_str_t expected_canon_url = ngx_string("f%26o%40o/b%20ar.php");
 
   ngx_http_request_t request;
   request.uri = url;
