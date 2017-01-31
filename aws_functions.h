@@ -258,7 +258,7 @@ static inline const ngx_str_t* ngx_aws_auth__request_body_hash(ngx_pool_t *pool,
 // modifies the source in place if it needs to be escaped
 // see http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
 static inline void ngx_aws_auth__escape_uri(ngx_pool_t *pool, ngx_str_t* src) {
-  u_char *escaped_data, *escaped_data_with_slashes;
+  u_char *escaped_data;
   u_int escaped_data_len, escaped_data_with_slashes_len, i, j;
   uintptr_t escaped_count, slashes_count = 0;
 
@@ -286,25 +286,23 @@ static inline void ngx_aws_auth__escape_uri(ngx_pool_t *pool, ngx_str_t* src) {
   // now we need to go back and re-replace each occurrence of %2F with a slash
   escaped_data_with_slashes_len = src->len + (escaped_count - slashes_count) * 2;
   if (slashes_count > 0) {
-    escaped_data_with_slashes = ngx_palloc(pool, escaped_data_with_slashes_len);
-
     for (i = 0, j = 0; i < escaped_data_with_slashes_len; i++) {
       if (j < escaped_data_len - 2 && strncmp((char*) (escaped_data + j), "%2F", 3) == 0) {
-        escaped_data_with_slashes[i] = '/';
+        escaped_data[i] = '/';
         j += 3;
       } else {
-        escaped_data_with_slashes[i] = escaped_data[j];
+        escaped_data[i] = escaped_data[j];
         j++;
       }
     }
 
-    src->data = escaped_data_with_slashes;
     src->len = escaped_data_with_slashes_len;
   } else {
     // no slashes
-    src->data = escaped_data;
     src->len = escaped_data_len;
   }
+
+  src->data = escaped_data;
 }
 
 static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const ngx_http_request_t *req) {
