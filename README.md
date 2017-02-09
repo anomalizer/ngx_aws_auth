@@ -1,5 +1,6 @@
 # AWS proxy module
 
+[![Build Status](https://travis-ci.org/anomalizer/ngx_aws_auth.svg?branch=master)](https://travis-ci.org/anomalizer/ngx_aws_auth)
  [![Gitter chat](https://badges.gitter.im/anomalizer/ngx_aws_auth.png)](https://gitter.im/ngx_aws_auth/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 
 This nginx module can proxy requests to authenticated S3 backends using Amazon's
