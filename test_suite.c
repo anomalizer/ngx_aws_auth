@@ -1,7 +1,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
-#include <cmocka.h>
+
+#include "vendor/cmocka/include/cmocka.h"
 
 #include "aws_functions.h"
 
@@ -90,14 +91,15 @@ static void sha256(void **state) {
 static void canon_header_string(void **state) {
     (void) state; /* unused */
 
-    ngx_str_t bucket, date, hash;
+    ngx_str_t bucket, date, hash, endpoint;
     struct AwsCanonicalHeaderDetails retval;
 
     bucket.data = "bugait"; bucket.len = 6;
     date.data = "20160221T063112Z"; date.len = 16;
     hash.data = "f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b"; hash.len = 64;
+    endpoint.data = "s3.amazonaws.com"; endpoint.len = 16;
 
-    retval = ngx_aws_auth__canonize_headers(pool, NULL, &bucket, &date, &hash);
+    retval = ngx_aws_auth__canonize_headers(pool, NULL, &bucket, &date, &hash, &endpoint);
     assert_string_equal(retval.canon_header_str->data, 
         "host:bugait.s3.amazonaws.com\nx-amz-content-sha256:f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b\nx-amz-date:20160221T063112Z\n");
 }
@@ -105,14 +107,15 @@ static void canon_header_string(void **state) {
 static void signed_headers(void **state) {
     (void) state; /* unused */
 
-    ngx_str_t bucket, date, hash;
+    ngx_str_t bucket, date, hash, endpoint;
     struct AwsCanonicalHeaderDetails retval;
 
     bucket.data = "bugait"; bucket.len = 6;
     date.data = "20160221T063112Z"; date.len = 16;
     hash.data = "f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b"; hash.len = 64;
+    endpoint.data = "s3.amazonaws.com"; endpoint.len = 16;
 
-    retval = ngx_aws_auth__canonize_headers(pool, NULL, &bucket, &date, &hash);
+    retval = ngx_aws_auth__canonize_headers(pool, NULL, &bucket, &date, &hash, &endpoint);
     assert_string_equal(retval.signed_header_names->data, "host;x-amz-content-sha256;x-amz-date");
 }
 
@@ -120,6 +123,7 @@ static void canonical_qs_empty(void **state) {
     (void) state; /* unused */
 	ngx_http_request_t request;
 	request.args = EMPTY_STRING;
+  request.connection = NULL;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
     assert_ngx_string_equal(*canon_qs, EMPTY_STRING);
@@ -130,6 +134,7 @@ static void canonical_qs_single_arg(void **state) {
 	ngx_http_request_t request;
 	ngx_str_t args = ngx_string("arg1=val1");
 	request.args = args;
+  request.connection = NULL;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
     assert_ngx_string_equal(*canon_qs, args);
@@ -141,6 +146,7 @@ static void canonical_qs_two_arg_reverse(void **state) {
 	ngx_str_t args = ngx_string("brg1=val2&arg1=val1");
 	ngx_str_t cargs = ngx_string("arg1=val1&brg1=val");
 	request.args = args;
+  request.connection = NULL;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
     assert_ngx_string_equal(*canon_qs, cargs);
@@ -152,6 +158,7 @@ static void canonical_qs_subrequest(void **state) {
 	ngx_str_t args = ngx_string("acl");
 	ngx_str_t cargs = ngx_string("acl=");
 	request.args = args;
+  request.connection = NULL;
 
 	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
     assert_ngx_string_equal(*canon_qs, cargs);
@@ -166,6 +173,7 @@ static void canonical_url_sans_qs(void **state) {
 	request.uri_start = request.uri.data;
 	request.args_start = url.data + url.len;
 	request.args = EMPTY_STRING;
+  request.connection = NULL;
 
 	const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
     assert_int_equal(canon_url->len, url.len);
@@ -187,6 +195,7 @@ static void canonical_url_with_qs(void **state) {
 	request.uri_start = request.uri.data;
 	request.args_start = url.data + 8;
 	request.args = args;
+  request.connection = NULL;
 
 	const ngx_str_t *canon_url = ngx_aws_auth__canon_url(pool, &request);
     assert_int_equal(canon_url->len, curl.len);
@@ -199,6 +208,7 @@ static void canonical_request_sans_qs(void **state) {
 	const ngx_str_t aws_date = ngx_string("20160221T063112Z");
 	const ngx_str_t url = ngx_string("/");
 	const ngx_str_t method = ngx_string("GET");
+  const ngx_str_t endpoint = ngx_string("s3.amazonaws.com");
 	
 	struct AwsCanonicalRequestDetails result;
 	ngx_http_request_t request;
@@ -206,8 +216,9 @@ static void canonical_request_sans_qs(void **state) {
 	request.uri = url;
 	request.method_name = method;
 	request.args = EMPTY_STRING;
+  request.connection = NULL;
 
-	result = ngx_aws_auth__make_canonical_request(pool, &request, &bucket, &aws_date);
+	result = ngx_aws_auth__make_canonical_request(pool, &request, &bucket, &aws_date, &endpoint);
 	assert_string_equal(result.canon_request->data, "GET\n\
 /\n\
 \n\
@@ -224,9 +235,10 @@ static void basic_get_signature(void **state) {
 
 	const ngx_str_t url = ngx_string("/");
 	const ngx_str_t method = ngx_string("GET");
-
 	const ngx_str_t key_scope = ngx_string("20150830/us-east-1/service/aws4_request");
 	const ngx_str_t bucket = ngx_string("example");
+  const ngx_str_t endpoint = ngx_string("s3.amazonaws.com");
+
 	ngx_str_t signing_key, signing_key_b64e = ngx_string("k4EntTNoEN22pdavRF/KyeNx+e1BjtOGsCKu2CkBvnU=");
 	ngx_http_request_t request;
 
@@ -234,13 +246,14 @@ static void basic_get_signature(void **state) {
 	request.uri = url;
 	request.method_name = method;
 	request.args = EMPTY_STRING;
+  request.connection = NULL;
 
 	signing_key.len = 64;
 	signing_key.data = ngx_palloc(pool, signing_key.len );
 	ngx_decode_base64(&signing_key, &signing_key_b64e);
 
 	struct AwsSignedRequestDetails result = ngx_aws_auth__compute_signature(pool, &request,
-								&signing_key, &key_scope, &bucket);
+								&signing_key, &key_scope, &bucket, &endpoint);
 	assert_string_equal(result.signature->data, "4ed4ec875ff02e55c7903339f4f24f8780b986a9cc9eff03f324d31da6a57690");
 }
 
