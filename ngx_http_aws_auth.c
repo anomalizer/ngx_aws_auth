@@ -185,6 +185,7 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
         }
         return NGX_OK;
     }
+    return NGX_CONF_OK;
 }
 
 static char *
