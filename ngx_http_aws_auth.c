@@ -183,9 +183,8 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
             h->lowcase_key = hv->key.data; /* We ensure that header names are already lowercased */
             h->value = hv->value;
         }
+        return NGX_OK;
     }
-
-    return NGX_OK;
 }
 
 static char *
