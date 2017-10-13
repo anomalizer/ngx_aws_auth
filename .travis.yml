@@ -3,8 +3,12 @@ language: c
 env:
   matrix:
     # one separate build per nginx version
-    - NGINX_VERSION=1.11.9
-    - NGINX_VERSION=1.10.2
+    #mainline verion
+    - NGINX_VERSION=1.13.6
+    #stable verions
+    - NGINX_VERSION=1.12.1
+    #legacy verions
+    - NGINX_VERSION=1.10.3
     - NGINX_VERSION=1.8.1
   global:
     - NGX_PATH=~/nginx
