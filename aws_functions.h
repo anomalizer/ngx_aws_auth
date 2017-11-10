@@ -324,11 +324,14 @@ static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const n
   ngx_memcpy(retval->data, req_uri_data, req_uri_len);
   retval->len = req_uri_len;
 
-  safe_ngx_log_error(req, "canonical url extracted before URI encoding is %V", retval);
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical url extracted before URI encoding is %V", retval);
 
   // then URI-encode it per RFC 3986
   ngx_aws_auth__escape_uri(pool, retval);
-  safe_ngx_log_error(req, "canonical url extracted after URI encoding is %V", retval);
+
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical url extracted after URI encoding is %V", retval);
 
   return retval;
 }
