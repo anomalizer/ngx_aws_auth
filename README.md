@@ -71,7 +71,7 @@ signing key as nginx reads the configuration only at startup time.
 A standalone python script has been provided to generate the signing key
 ```
 ./generate_signing_key -h
-usage: generate_signing_key [-h] -k ACCESS_KEY -r REGION [-s SERVICE]
+usage: generate_signing_key [-h] -k SECRET_KEY -r REGION [-s SERVICE]
                             [-d DATE] [--no-base64] [-v]
 
 Generate AWS S3 signing key in it's base64 encoded form
