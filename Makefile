@@ -30,4 +30,4 @@ test: .cmocka_build | nginx
 clean:
 	rm -f *.o test_suite
 
-# vim: ft=make ts=8 sw=8 noet	
+# vim: ft=make ts=8 sw=8 noet
