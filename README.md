@@ -21,19 +21,18 @@ Implements proxying of authenticated requests to S3.
     aws_access_key your_aws_access_key; # Example AKIDEXAMPLE
     aws_key_scope scope_of_generated_signing_key; #Example 20150830/us-east-1/service/aws4_request
     aws_signing_key signing_key_generated_using_script; #Example L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
-	aws_s3_bucket your_s3_bucket;
+    aws_s3_bucket your_s3_bucket;
 
     location / {
-	  aws_sign;
+      aws_sign;
       proxy_pass http://your_s3_bucket.s3.amazonaws.com;
     }
 
     # This is an example that does not use the server root for the proxy root
-	location /myfiles {
-	
+    location /myfiles {
+
       rewrite /myfiles/(.*) /$1 break;
       proxy_pass http://your_s3_bucket.s3.amazonaws.com/$1;
-
 
       aws_access_key your_aws_access_key;
       aws_key_scope scope_of_generated_signing_key;
@@ -41,8 +40,8 @@ Implements proxying of authenticated requests to S3.
     }
 
     # This is an example that use specific s3 endpoint, default endpoint is s3.amazonaws.com
-	location /s3_beijing {
-	
+    location /s3_beijing {
+
       rewrite /s3_beijing/(.*) /$1 break;
       proxy_pass http://your_s3_bucket.s3.cn-north-1.amazonaws.com.cn/$1;
 
@@ -56,7 +55,7 @@ Implements proxying of authenticated requests to S3.
 ```
 
 ## Security considerations
-The V4 protocol does not need access to the actual secret keys that one obtains 
+The V4 protocol does not need access to the actual secret keys that one obtains
 from the IAM service. The correct way to use the IAM key is to actually generate
 a scoped signing key and use this signing key to access S3. This nginx module
 requires the signing key and not the actual secret key. It is an insecure practise
