@@ -39,7 +39,7 @@ static void x_amz_date(void **state) {
 	const ngx_str_t* date;
 
     (void) state; /* unused */
-	
+
 	t = 1;
 	date = ngx_aws_auth__compute_request_time(pool, &t);
 	assert_int_equal(date->len, 16);
@@ -100,7 +100,7 @@ static void canon_header_string(void **state) {
     endpoint.data = "s3.amazonaws.com"; endpoint.len = 16;
 
     retval = ngx_aws_auth__canonize_headers(pool, NULL, &bucket, &date, &hash, &endpoint);
-    assert_string_equal(retval.canon_header_str->data, 
+    assert_string_equal(retval.canon_header_str->data,
         "host:bugait.s3.amazonaws.com\nx-amz-content-sha256:f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b\nx-amz-date:20160221T063112Z\n");
 }
 
@@ -227,7 +227,7 @@ static void canonical_request_sans_qs(void **state) {
 	const ngx_str_t url = ngx_string("/");
 	const ngx_str_t method = ngx_string("GET");
   const ngx_str_t endpoint = ngx_string("s3.amazonaws.com");
-	
+
 	struct AwsCanonicalRequestDetails result;
 	ngx_http_request_t request;
 

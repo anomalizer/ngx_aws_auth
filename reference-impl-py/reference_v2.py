@@ -54,7 +54,7 @@ def str_to_sign_v2(method, vhost_mode, bucket, url):
 def v2sign(key, method, vhost_mode, bucket, url):
     raw = str_to_sign_v2(method, vhost_mode, bucket, url)
     print "String to sign is\n----------------------\n%s\n---------------------\n" % raw['s2s']
-    retval = hmac.new(key, raw['s2s'], sha1)   
+    retval = hmac.new(key, raw['s2s'], sha1)
     return {'sign': retval.digest().encode("base64").rstrip("\n"),
         'headers': raw['headers']}
 
