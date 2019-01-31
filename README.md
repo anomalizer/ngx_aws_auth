@@ -21,10 +21,10 @@ Implements proxying of authenticated requests to S3.
     aws_access_key your_aws_access_key; # Example AKIDEXAMPLE
     aws_key_scope scope_of_generated_signing_key; #Example 20150830/us-east-1/service/aws4_request
     aws_signing_key signing_key_generated_using_script; #Example L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
-    aws_s3_bucket your_s3_bucket;
 
     location / {
       aws_sign;
+      aws_endpoint your_s3_bucket.s3.amazonaws.com;
       proxy_pass http://your_s3_bucket.s3.amazonaws.com;
     }
 
@@ -33,10 +33,12 @@ Implements proxying of authenticated requests to S3.
 
       rewrite /myfiles/(.*) /$1 break;
       proxy_pass http://your_s3_bucket.s3.amazonaws.com/$1;
+      
 
       aws_access_key your_aws_access_key;
       aws_key_scope scope_of_generated_signing_key;
       aws_signing_key signing_key_generated_using_script;
+      aws_endpoint your_s3_bucket.s3.amazonaws.com;
     }
 
     # This is an example that use specific s3 endpoint, default endpoint is s3.amazonaws.com
@@ -46,11 +48,24 @@ Implements proxying of authenticated requests to S3.
       proxy_pass http://your_s3_bucket.s3.cn-north-1.amazonaws.com.cn/$1;
 
       aws_sign;
-      aws_endpoint "s3.cn-north-1.amazonaws.com.cn";
+      aws_endpoint "your_s3_bucket.s3.cn-north-1.amazonaws.com.cn";
       aws_access_key your_aws_access_key;
       aws_key_scope scope_of_generated_signing_key;
       aws_signing_key signing_key_generated_using_script;
     }
+
+    # This is an example that use compatible s3 endpoint (such as minio)
+    location /films {
+
+      proxy_pass http://10.1.3.9:9000:9000/films/;
+
+      aws_sign;
+      aws_endpoint "10.1.3.9:9000";
+      aws_access_key your_aws_access_key;
+      aws_key_scope scope_of_generated_signing_key;
+      aws_signing_key signing_key_generated_using_script;
+    }
+
   }
 ```
 
