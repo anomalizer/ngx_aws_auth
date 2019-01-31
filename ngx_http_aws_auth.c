@@ -161,7 +161,7 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
     }
 
     const ngx_array_t* headers_out = ngx_aws_auth__sign(r->pool, r,
-        &conf->access_key, &conf->signing_key_decoded, &conf->key_scope, &conf->bucket_name, &conf->endpoint);
+        &conf->access_key, &conf->signing_key_decoded, &conf->key_scope, &conf->endpoint);
 
     ngx_uint_t i;
     for(i = 0; i < headers_out->nelts; i++)
