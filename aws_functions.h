@@ -160,7 +160,8 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 	}
 	retval->len--;
 
-  safe_ngx_log_error(req, "canonical qs constructed is %V", retval);
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical qs constructed is %V", retval);
 
 	return retval;
 }
@@ -363,7 +364,8 @@ static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_req
 		canon_headers.signed_header_names, request_body_hash) - retval.canon_request->data;
 	retval.header_list = canon_headers.header_list;
 
-  safe_ngx_log_error(req, "canonical req is %V", retval.canon_request);
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical req is %V", retval.canon_request);
 
 	return retval;
 }
