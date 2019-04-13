@@ -6,11 +6,11 @@ if test -n "$ngx_module_link"; then
     ngx_module_incs=
     ngx_module_deps=
     ngx_module_srcs="$ngx_addon_dir/ngx_http_aws_auth.c $ngx_addon_dir/crypto_helper_openssl.c"
-    ngx_module_libs="$CORE_LIBS -lssl"
+    ngx_module_libs="$CORE_LIBS -lssl -lcrypto"
 
     . auto/module
 else
    HTTP_MODULES="$HTTP_MODULES ngx_http_aws_auth_module"
    NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_aws_auth.c $ngx_addon_dir/crypto_helper_openssl.c"
-   CORE_LIBS="$CORE_LIBS -lssl"
+   CORE_LIBS="$CORE_LIBS -lssl -lcrypto"
 fi
