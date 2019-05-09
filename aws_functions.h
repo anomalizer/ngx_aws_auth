@@ -60,8 +60,8 @@ struct AwsSignedRequestDetails {
     ngx_log_error(NGX_LOG_ERR, req->connection->log, 0, __VA_ARGS__); \
   }
 
-static const ngx_str_t EMPTY_STRING_SHA256 = ngx_string("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 static const ngx_str_t EMPTY_STRING = ngx_null_string;
+static const ngx_str_t UNSIGNED_PAYLOAD = ngx_string("UNSIGNED-PAYLOAD");
 static const ngx_str_t AMZ_HASH_HEADER = ngx_string("x-amz-content-sha256");
 static const ngx_str_t AMZ_DATE_HEADER = ngx_string("x-amz-date");
 static const ngx_str_t HOST_HEADER = ngx_string("host");
@@ -248,8 +248,7 @@ static inline struct AwsCanonicalHeaderDetails ngx_aws_auth__canonize_headers(ng
 
 static inline const ngx_str_t* ngx_aws_auth__request_body_hash(ngx_pool_t *pool,
 	const ngx_http_request_t *req) {
-	/* TODO: support cases involving non-empty body */
-	return &EMPTY_STRING_SHA256;
+	return &UNSIGNED_PAYLOAD;
 }
 
 // AWS wants a peculiar kind of URI-encoding: they want RFC 3986, except that

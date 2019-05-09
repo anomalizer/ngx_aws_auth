@@ -155,7 +155,7 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
     ngx_table_elt_t  *h;
     header_pair_t *hv;
 
-    if (!(r->method & (NGX_HTTP_GET|NGX_HTTP_HEAD))) {
+    if (!(r->method & (NGX_HTTP_GET|NGX_HTTP_PUT|NGX_HTTP_HEAD))) {
         /* We do not wish to support anything with a body as signing for a body is unimplemented */
         return NGX_HTTP_NOT_ALLOWED;
     }
