@@ -1,0 +1,35 @@
+# Attempt for getting memcached to work with nginx - Did not work
+
+events { }
+
+http {
+  server {
+    listen 80;
+    server_name www.domain.com;
+
+    aws_access_key "AKIAJXI6TBS3WIVC2TRA";
+    aws_signing_key "b7nlZ5r3mN7M1h42Bu2N2G0buLAqT0qNydFl1vXJNIc=";
+    aws_key_scope "20190506/ap-southeast-2/s3/aws4_request";
+    aws_s3_bucket "small-values";
+
+    location / {
+      set $memcached_key $uri;
+      memcached_pass 127.0.0.1:11211;
+      error_page 404 = @fallback;
+    }
+
+    location @fallback {
+      aws_sign;
+      proxy_pass https://small-values.s3.amazonaws.com;
+      proxy_ignore_headers Expires;
+      proxy_ignore_headers X-Accel-Expires;
+      proxy_ignore_headers Cache-Control;
+      proxy_ignore_headers Set-Cookie;
+      proxy_hide_header Set-Cookie;
+      proxy_hide_header X-Accel-Expires;
+      proxy_hide_header Expires;
+      proxy_hide_header Cache-Control;
+      proxy_hide_header Pragma;
+    }
+  }
+}

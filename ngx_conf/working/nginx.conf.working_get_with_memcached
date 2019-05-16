@@ -1,0 +1,48 @@
+# Querying memcached before forwarding to S3
+
+events { }
+
+http {
+  upstream memcached {
+    server 127.0.0.1:11211;
+    keepalive 32;
+  }
+
+  server {
+    listen 80;
+    server_name localhost;
+
+    aws_access_key "AKIAJXI6TBS3WIVC2TRA";
+    aws_signing_key "b7nlZ5r3mN7M1h42Bu2N2G0buLAqT0qNydFl1vXJNIc=";
+    aws_key_scope "20190506/ap-southeast-2/s3/aws4_request";
+    aws_s3_bucket "small-values";
+
+    location = /memc {
+        internal;
+
+        memc_connect_timeout 100ms;
+        memc_send_timeout 100ms;
+        memc_read_timeout 100ms;
+        memc_ignore_client_abort on;
+
+        set $memc_key $arg_key;
+        set $memc_exptime 300;
+
+        memc_pass memcached;
+    }
+
+    location / {
+      set $key $uri;
+      srcache_fetch GET /memc key=$key;
+      srcache_methods GET;
+      srcache_store_statuses 200 301 302;
+
+      aws_sign;
+      proxy_pass https://small-values.s3.amazonaws.com;
+      set $key $uri;
+      srcache_request_cache_control off;
+      srcache_store PUT /memc key=$key;
+    }
+
+  }
+}

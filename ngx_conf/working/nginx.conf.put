@@ -1,0 +1,21 @@
+# Forwarding PUT requests to S3 proxy
+
+events { }
+
+http {
+  server {
+    listen 80;
+    server_name www.domain.com;
+
+    aws_access_key "AKIAJXI6TBS3WIVC2TRA";
+    aws_signing_key "IugeDgQFXVemJswEm4kRwQpcRn7/ddx6ZNn2uKieIyI=";
+    aws_key_scope "20190508/ap-southeast-2/s3/aws4_request";
+    aws_s3_bucket "small-values";
+
+    location / {
+      proxy_pass_request_body on;
+      aws_sign;
+      proxy_pass https://small-values.s3.amazonaws.com;
+    }
+  }
+}

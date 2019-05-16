@@ -1,0 +1,47 @@
+# Attempt to sign AWS GET requests correctly
+# This uses AWS signature version 2, which no longer works for S3
+
+events { }
+
+http {
+  upstream myproject {
+    server 10.10.1.1:8080;
+    server 10.10.1.3:8080;
+    server 10.10.1.4:8080;
+  }
+  upstream aws {
+    server small-values.s3.amazonaws.com;
+  }
+
+  server {
+    listen 80;
+    server_name www.domain.com;
+    #location / {
+    #  proxy_pass http://myproject;
+    #}
+    location ~* ^/s3/(.*) {
+      set $bucket           'small-values';
+      set $aws_access       'AKIAJXI6TBS3WIVC2TRA';
+      set $aws_secret       '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';
+      set $url_full         "$1";
+      set_formatted_gmt_time $now "%a, %e %b %Y %H:%M:%S +0000";
+      set $string_to_sign   "$request_method\n\n\nx-amz-date:$now\n/$bucket/$url_full";
+      set_hmac_sha1          $aws_signature $aws_secret $string_to_sign;
+      set_encode_base64      $aws_signature $aws_signature;
+
+      resolver               172.31.0.2 valid=300s;
+      resolver_timeout       10s;
+
+      proxy_http_version     1.1;
+      proxy_set_header       Host $bucket.s3.amazonaws.com;
+      proxy_set_header       x-amz-date $now;
+      proxy_set_header       Authorization "AWS $aws_access:$aws_signature";
+      proxy_buffering        off;
+      proxy_intercept_errors on;
+
+      rewrite .* /$url_full break;
+
+      proxy_pass             http://s3.amazonaws.com;
+    }
+  }
+}
