@@ -100,9 +100,8 @@ L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
 ```
 
 ## Known limitations
-The 2.x version of the module currently only has support for GET and HEAD calls. This is because
-signing request body is complex and has not yet been implemented.
-
+This version adds support for PUT calls as well. The earlier version of the module only had support
+for GET and HEAD calls.
 
 
 ## Credits
