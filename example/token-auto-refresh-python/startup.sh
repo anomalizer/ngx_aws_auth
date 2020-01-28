@@ -1,8 +1,10 @@
 #!/bin/sh
 
-# substitute the domain and configure the first set of credentials
-envsubst '${BUCKET},${BUCKET_DOMAIN},${_AWS_SIGNING_SCOPE},${_AWS_ACCESS_KEY},${_AWS_SIGNING_KEY},${TOKEN}' </tmp/nginx/server.conf > /tmp/nginx/server-tmp.conf
-cp /tmp/nginx/server-tmp.conf /etc/nginx/server.conf
+python3 ./refresh_credentials.py -d --no-reload
+
+# schedule check for new credentials every minute via cron
+echo "* * * * * /refresh_credentials.py" >> /etc/crontabs/root
+crond
 
 # start nginx (blocking call)
 nginx -g "daemon off;"
