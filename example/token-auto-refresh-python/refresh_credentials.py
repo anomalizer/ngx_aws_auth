@@ -75,10 +75,10 @@ def refresh_credentials(access_key, secret, security_token, signing_key, scope, 
             fp.write('%s\n%s\n' % (expiration, datetime.utcnow()))
 
     def substitue_credentials():
-        subprocess.run('envsubst \'${_AWS_BUCKET},${_AWS_BUCKET_DOMAIN},${_AWS_SIGNING_SCOPE},${_AWS_ACCESS_KEY},${_AWS_SIGNING_KEY},${_AWS_SECURITY_TOKEN}\' </tmp/nginx/s3proxy.conf > /etc/nginx/s3proxy.conf', shell=True)
+        subprocess.run('envsubst \'${_AWS_BUCKET},${_AWS_BUCKET_DOMAIN},${_AWS_SIGNING_SCOPE},${_AWS_ACCESS_KEY},${_AWS_SIGNING_KEY},${_AWS_SECURITY_TOKEN}\' </tmp/nginx/server.conf > /etc/nginx/server.conf', shell=True)
     
     def logConfig():
-        with open('/etc/nginx/s3proxy.conf') as fp:
+        with open('/etc/nginx/server.conf') as fp:
             logging.debug(fp.read())
 
     export_credentials()
@@ -93,7 +93,7 @@ def format_date(date):
 
 def has_key_expired(exiration, last_created):
     now = datetime.utcnow()
-    return now >= expiration or now.date() > last_created.date()
+    return expiration == None or now >= expiration or now.date() > last_created.date()
 
 logging.info('Checking Access Credentials...')
 
