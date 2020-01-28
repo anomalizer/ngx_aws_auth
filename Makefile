@@ -1,6 +1,9 @@
 CC=gcc
 CFLAGS=-g -I${NGX_PATH}/src/os/unix -I${NGX_PATH}/src/core -I${NGX_PATH}/src/http -I${NGX_PATH}/src/http/modules -I${NGX_PATH}/src/event -I${NGX_PATH}/objs/ -I.
 
+docker-test:
+	docker build . -f docker/tests/Dockerfile -t ngx_aws_auth_tests \
+	&& docker run --rm --name ngx_aws_auth_tests ngx_aws_auth_tests
 
 all:
 
