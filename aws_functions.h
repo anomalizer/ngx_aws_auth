@@ -55,10 +55,14 @@ struct AwsSignedRequestDetails {
 
 // mainly useful to avoid having to full instantiate request structures for
 // tests...
+#ifndef NO_AWS_AUTH_LOGS
 #define safe_ngx_log_error(req, ...)                                  \
   if (req->connection) {                                              \
-    ngx_log_error(NGX_LOG_ERR, req->connection->log, 0, __VA_ARGS__); \
+	ngx_log_error(NGX_LOG_ERR, req->connection->log, 0, __VA_ARGS__); \
   }
+#else
+#define safe_ngx_log_error(req, ...)
+#endif
 
 static const ngx_str_t EMPTY_STRING_SHA256 = ngx_string("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 static const ngx_str_t EMPTY_STRING = ngx_null_string;
@@ -70,6 +74,11 @@ static const ngx_str_t AUTHZ_HEADER = ngx_string("authorization");
 
 static inline char* __CHAR_PTR_U(u_char* ptr) {return (char*)ptr;}
 static inline const char* __CONST_CHAR_PTR_U(const u_char* ptr) {return (const char*)ptr;}
+
+static inline void ngx_conditional_log(const ngx_http_request_t *req, ...) {
+	#ifndef NO_AWS_AUTH_LOGS
+	#endif
+}
 
 static inline const ngx_str_t* ngx_aws_auth__compute_request_time(ngx_pool_t *pool, const time_t *timep) {
 	ngx_str_t *const retval = ngx_palloc(pool, sizeof(ngx_str_t));
