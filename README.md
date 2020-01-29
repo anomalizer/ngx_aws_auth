@@ -54,6 +54,21 @@ Implements proxying of authenticated requests to S3.
   }
 ```
 
+## Security Token Usage
+
+If you are using temporary credentials through something like an IAM role, this module
+supports this by using the `aws_security_token` directive. You specify this the same as
+you do the other directives, however, **you are responsible for recycling the credentials.**
+
+This _should_ be the normal usage of this module, as even with static credentials you
+need to regenerate the signing scope and key after a date change. An example of doing
+this via python and the `envsubst` command can be found in the examples folder as a
+docker image. The original use case for the example is to pull the credentials from
+a Fargate container environment, but it can be adapted to support EC2
+instances. See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+for more details on how to retrieve temporary credentials for EC2 instances assigned an
+IAM role.
+
 ## Security considerations
 The V4 protocol does not need access to the actual secret keys that one obtains
 from the IAM service. The correct way to use the IAM key is to actually generate
@@ -103,7 +118,11 @@ L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
 The 2.x version of the module currently only has support for GET and HEAD calls. This is because
 signing request body is complex and has not yet been implemented.
 
+## Running Tests
 
+You should be able to run all of the tests for this module via a Docker container. If you run
+`make docker-test` from the root of this project, it will build and run the tests for this project
+via container.
 
 ## Credits
 Original idea based on http://nginx.org/pipermail/nginx/2010-February/018583.html and suggestion of moving to variables rather than patching the proxy module.
