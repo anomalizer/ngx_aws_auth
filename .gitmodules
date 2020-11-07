@@ -1,3 +1,0 @@
-[submodule "vendor/cmocka"]
-	path = vendor/cmocka
-	url = https://github.com/clibs/cmocka.git
