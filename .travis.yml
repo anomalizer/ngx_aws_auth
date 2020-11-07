@@ -1,26 +1,30 @@
 language: c
 
+os:
+  - linux
+dist: xenial
+addons:
+  apt:
+    packages:
+      - libpcre3
+      - libpcre3-dev
+      - zlib1g-dev
+      - libssl-dev
+
 env:
-  matrix:
+  jobs:
     # one separate build per nginx version
     #mainline verion
-    - NGINX_VERSION=1.13.6
+    - NGINX_VERSION=1.19.4
     #stable verions
-    - NGINX_VERSION=1.12.1
+    - NGINX_VERSION=1.18.0
     #legacy verions
-    - NGINX_VERSION=1.10.3
-    - NGINX_VERSION=1.8.1
+    - NGINX_VERSION=1.16.1
+    - NGINX_VERSION=1.14.2
   global:
-    - NGX_PATH=~/nginx
     - LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
 
-sudo: true
-
-before_install:
-  - sudo apt-get install libpcre3 libpcre3-dev zlib1g-dev libssl-dev
-  - cd && wget https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz && tar -xvzf nginx-$NGINX_VERSION.tar.gz && ln -s nginx-$NGINX_VERSION $NGX_PATH
-  - cd $NGX_PATH && ./configure --with-http_ssl_module --add-module=$TRAVIS_BUILD_DIR
-  - cd $TRAVIS_BUILD_DIR && make nginx
-
 script:
-  - make test
+  make prepare-travis-env nginx test
+
+ # vim: ts=2 sw=2

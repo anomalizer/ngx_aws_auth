@@ -7,10 +7,16 @@ all:
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-.PHONY: all clean test nginx
+.PHONY: all clean test nginx prepare-travis-env
 
 
-NGX_OBJS := $(shell find ${NGX_PATH}/objs -name \*.o)
+NGX_PATH := $(shell echo `pwd`/nginx)
+
+prepare-travis-env:
+	wget --no-verbose https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
+	tar -xzf nginx-${NGINX_VERSION}.tar.gz
+	ln -s nginx-${NGINX_VERSION} ${NGX_PATH}
+	cd ${NGX_PATH} && ./configure --with-http_ssl_module --add-module=${TRAVIS_BUILD_DIR}
 
 nginx:
 	cd ${NGX_PATH} && rm -rf ${NGX_PATH}/objs/src/core/nginx.o && make
@@ -24,7 +30,7 @@ vendor/cmocka:
 test: .cmocka_build | nginx
 	strip -N main -o ${NGX_PATH}/objs/src/core/nginx_without_main.o ${NGX_PATH}/objs/src/core/nginx.o \
 	&& mv ${NGX_PATH}/objs/src/core/nginx_without_main.o ${NGX_PATH}/objs/src/core/nginx.o \
-	&& $(CC) test_suite.c $(CFLAGS) -o test_suite -lcmocka ${NGX_OBJS} -ldl -lpthread -lcrypt -lssl -lpcre -lcrypto -lz \
+	&& $(CC) test_suite.c $(CFLAGS) -o test_suite -lcmocka `find ${NGX_PATH}/objs -name \*.o` -ldl -lpthread -lcrypt -lssl -lpcre -lcrypto -lz \
 	&& ./test_suite
 
 clean:
