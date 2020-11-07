@@ -11,7 +11,6 @@ all:
 
 
 NGX_PATH := $(shell echo `pwd`/nginx)
-NGX_OBJS := $(shell find ${NGX_PATH}/objs -name \*.o)
 
 prepare-travis-env:
 	wget --no-verbose https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
@@ -31,7 +30,7 @@ vendor/cmocka:
 test: .cmocka_build | nginx
 	strip -N main -o ${NGX_PATH}/objs/src/core/nginx_without_main.o ${NGX_PATH}/objs/src/core/nginx.o \
 	&& mv ${NGX_PATH}/objs/src/core/nginx_without_main.o ${NGX_PATH}/objs/src/core/nginx.o \
-	&& $(CC) test_suite.c $(CFLAGS) -o test_suite -lcmocka ${NGX_OBJS} -ldl -lpthread -lcrypt -lssl -lpcre -lcrypto -lz \
+	&& $(CC) test_suite.c $(CFLAGS) -o test_suite -lcmocka `find ${NGX_PATH}/objs -name \*.o` -ldl -lpthread -lcrypt -lssl -lpcre -lcrypto -lz \
 	&& ./test_suite
 
 clean:
