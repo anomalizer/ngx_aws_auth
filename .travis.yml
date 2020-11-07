@@ -2,6 +2,7 @@ language: c
 
 os:
   - linux
+dist: bionic # preferred disto for testing all versions of nginx
 
 addons:
   apt:
@@ -15,7 +16,7 @@ env:
   jobs:
     # one separate build per nginx version
     #mainline verion
-    - NGINX_VERSION=1.19.4
+    - NGINX_VERSION=1.19.4 # single version used to test outside of primary OS
     #stable verions
     - NGINX_VERSION=1.18.0
     #legacy verions
@@ -27,7 +28,7 @@ env:
 jobs:
   include:
     - dist: focal
-    - dist: bionic
+    - dist: xenial
 
 script:
   make prepare-travis-env nginx test
