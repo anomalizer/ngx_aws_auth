@@ -7,10 +7,17 @@ all:
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-.PHONY: all clean test nginx
+.PHONY: all clean test nginx prepare-travis-env
 
 
 NGX_OBJS := $(shell find ${NGX_PATH}/objs -name \*.o)
+
+prepare-travis-env:
+	wget https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+	&& tar -xvzf nginx-${NGINX_VERSION}.tar.gz \
+	&& ln -s nginx-${NGINX_VERSION} ${NGX_PATH} \
+	&& cd ${NGX_PATH} \
+	&& ./configure --with-http_ssl_module --add-module=${TRAVIS_BUILD_DIR}
 
 nginx:
 	cd ${NGX_PATH} && rm -rf ${NGX_PATH}/objs/src/core/nginx.o && make
