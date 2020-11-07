@@ -1,11 +1,11 @@
 language: c
 
 os:
-    - linux
+  - linux
 dist: xenial
 
 env:
-  matrix:
+  jobs:
     # one separate build per nginx version
     #mainline verion
     - NGINX_VERSION=1.19.4
@@ -28,3 +28,5 @@ before_install:
 
 script:
   - make test
+
+ # vim: ts=2 sw=2
