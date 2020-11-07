@@ -22,7 +22,6 @@ env:
     - NGINX_VERSION=1.16.1
     - NGINX_VERSION=1.14.2
   global:
-    - NGX_PATH=~/nginx
     - LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
 
 script:
