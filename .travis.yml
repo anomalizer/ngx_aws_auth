@@ -25,12 +25,15 @@ env:
     - NGX_PATH=~/nginx
     - LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
 
-before_install:
-  - cd && wget https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz && tar -xvzf nginx-$NGINX_VERSION.tar.gz && ln -s nginx-$NGINX_VERSION $NGX_PATH
-  - cd $NGX_PATH && ./configure --with-http_ssl_module --add-module=$TRAVIS_BUILD_DIR
-  - cd $TRAVIS_BUILD_DIR && make nginx
-
-script:
-  - make test
+jobs:
+  include:
+    - stage: fetch source
+      script: cd && wget https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz && tar -xvzf nginx-$NGINX_VERSION.tar.gz && ln -s nginx-$NGINX_VERSION $NGX_PATH
+    - stage: configure build
+      script: cd $NGX_PATH && ./configure --with-http_ssl_module --add-module=$TRAVIS_BUILD_DIR
+    - stage: build
+      script: cd $TRAVIS_BUILD_DIR && make nginx
+    - stage: test
+      script: make test
 
  # vim: ts=2 sw=2
