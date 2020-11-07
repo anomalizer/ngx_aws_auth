@@ -29,6 +29,8 @@ jobs:
   include:
     - dist: focal
     - dist: xenial
+    - dist: focal
+      env: CC=clang
 
 script:
   make prepare-travis-env nginx test
