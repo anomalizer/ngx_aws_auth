@@ -2,10 +2,7 @@ language: c
 
 os:
   - linux
-dist: 
-  - bionic
-  - fossa
-  - xenial
+dist: bionic
 
 addons:
   apt:
@@ -22,9 +19,16 @@ env:
 
 jobs:
   include:
+    - dist: fossa
+      env: NGINX_VERSION=1.18.0 # stable version
+    - dist: xenial
+      env: NGINX_VERSION=1.18.0 # stable version
     - env: NGINX_VERSION=1.19.4 # mainline
     - env: NGINX_VERSION=1.16.1 # legacy 1
     - env: NGINX_VERSION=1.14.2 # legacy 2
+  allow_failures:
+    - dist: fossa
+      env: NGINX_VERSION=1.18.0 CC=clang # stable version
 
 script:
   make prepare-travis-env nginx test
