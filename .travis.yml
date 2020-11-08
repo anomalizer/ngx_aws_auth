@@ -23,10 +23,10 @@ env:
 
 jobs:
   include:
-    - dist: fossa
+    - dist: focal
     - dist: xenial
   allow_failures:
-    - dist: fossa
+    - dist: focal
       env: NGINX_VERSION=1.18.0 CC=clang # stable version
 
 script:
