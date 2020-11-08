@@ -2,7 +2,7 @@ language: c
 
 os:
   - linux
-dist: bionic # preferred disto for testing all versions of nginx
+dist: bionic
 
 addons:
   apt:
@@ -14,21 +14,21 @@ addons:
 
 env:
   jobs:
-    # one separate build per nginx version
-    #mainline verion
-    - NGINX_VERSION=1.19.4 # single version used to test outside of primary OS
-    #stable verions
-    - NGINX_VERSION=1.18.0
-    #legacy verions
-    - NGINX_VERSION=1.16.1
-    - NGINX_VERSION=1.14.2
+    - NGINX_VERSION=1.18.0 # stable version
+    - NGINX_VERSION=1.19.4 # mainline
+    - NGINX_VERSION=1.16.1 # legacy 1
+    - NGINX_VERSION=1.14.2 # legacy 2
   global:
     - LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
 
 jobs:
   include:
-    - dist: focal
     - dist: xenial
+    - dist: focal
+    - dist: focal
+      compiler: clang
+  allow_failures:
+    - compiler: clang
 
 script:
   make prepare-travis-env nginx test
