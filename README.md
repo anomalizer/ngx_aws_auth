@@ -98,6 +98,9 @@ L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
 20160902/us-east-1/s3/aws4_request
 
 ```
+## Supported environments
+This plugin is tested against a variety of nginx versions, compilers, OS versions and hardware architectures. Take a look at the .travis.yml file or the latest travis build status to see the versions that the plugin has been tested against
+
 
 ## Known limitations
 The 2.x version of the module currently only has support for GET and HEAD calls. This is because
