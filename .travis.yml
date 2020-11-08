@@ -23,11 +23,12 @@ env:
 
 jobs:
   include:
-    - dist: focal
     - dist: xenial
-  allow_failures:
     - dist: focal
-      env: NGINX_VERSION=1.18.0 CC=clang # stable version
+    - dist: focal
+      env: CC=clang NGINX_VERSION=1.19.4
+  allow_failures:
+    - env: CC=clang # stable version
 
 script:
   make prepare-travis-env nginx test
