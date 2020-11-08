@@ -28,7 +28,7 @@ jobs:
     - dist: focal
       compiler: clang
   allow_failures:
-    - complier: clang
+    - compiler: clang
 
 script:
   make prepare-travis-env nginx test
