@@ -27,6 +27,11 @@ jobs:
     - dist: focal
     - dist: focal
       compiler: clang
+    - dist: focal
+      group: edge
+      arch: arm64-graviton2
+      compiler: clang
+      virt: lxd
   allow_failures:
     - compiler: clang
 
