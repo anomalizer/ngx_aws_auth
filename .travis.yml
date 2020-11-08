@@ -26,9 +26,9 @@ jobs:
     - dist: xenial
     - dist: focal
     - dist: focal
-      env: CC=clang NGINX_VERSION=1.19.4
+      compiler: clang
   allow_failures:
-    - env: CC=clang # stable version
+    - complier: clang
 
 script:
   make prepare-travis-env nginx test
