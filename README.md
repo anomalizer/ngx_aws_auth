@@ -57,7 +57,7 @@ Implements proxying of authenticated requests to S3.
     # This is an example that use compatible s3 endpoint (such as minio)
     location /films {
 
-      proxy_pass http://10.1.3.9:9000:9000/films/;
+      proxy_pass http://10.1.3.9:9000/films/;
 
       aws_sign;
       aws_endpoint "10.1.3.9:9000";
