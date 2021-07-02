@@ -23,7 +23,6 @@ env:
 
 jobs:
   include:
-    - dist: xenial
     - dist: focal
     - dist: focal
       compiler: clang
