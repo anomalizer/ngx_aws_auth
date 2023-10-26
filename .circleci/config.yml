@@ -19,7 +19,8 @@ jobs:
             apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential
       - run:
           name: Build and test
-          command: make prepare-travis-env nginx test
+          command: |
+            make prepare-travis-env nginx test
 
 workflows:
   version: 2
