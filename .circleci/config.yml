@@ -13,7 +13,7 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update
-            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev
+            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential
       - run:
           name: Set environment variables
           command: |
