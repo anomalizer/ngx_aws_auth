@@ -8,17 +8,15 @@ executors:
 jobs:
   build:
     executor: build-executor
+    environment:
+      NGINX_VERSION: 1.18.0
+      LD_LIBRARY_PATH: /lib:/usr/lib:/usr/local/lib    
     steps:
       - run:
           name: Install dependencies
           command: |
             apt-get update
             apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential
-      - run:
-          name: Set environment variables
-          command: |
-            export NGINX_VERSION=1.18.0
-            export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
       - run:
           name: Build and test
           command: make prepare-travis-env nginx test
