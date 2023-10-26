@@ -8,9 +8,6 @@ executors:
 jobs:
   build:
     executor: build-executor
-    environment:
-      NGINX_VERSION: 1.18.0
-      LD_LIBRARY_PATH: /lib:/usr/lib:/usr/local/lib    
     steps:
       - run:
           name: Install dependencies
@@ -21,6 +18,8 @@ jobs:
       - run:
           name: Build and test
           command: |
+            export NGINX_VERSION=1.18.0
+            export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib    
             make prepare-travis-env nginx test
 
 workflows:
