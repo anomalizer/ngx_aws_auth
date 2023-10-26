@@ -41,6 +41,7 @@ ngx_str_t* ngx_aws_auth__hash_sha256(ngx_pool_t *pool, const ngx_str_t *blob) {
     ngx_str_t *const retval = ngx_palloc(pool, sizeof(ngx_str_t));
 
     EVP_MD_CTX *mdctx;
+    mdctx = EVP_MD_CTX_new();
     
     if (mdctx == NULL) {
         // Handle error
