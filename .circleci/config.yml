@@ -12,12 +12,12 @@ jobs:
       NGINX_VERSION: 1.18.0
       LD_LIBRARY_PATH: /lib:/usr/lib:/usr/local/lib    
     steps:
-      - checkout
       - run:
           name: Install dependencies
           command: |
             apt-get update
-            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential
+            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget
+      - checkout
       - run:
           name: Build and test
           command: |
