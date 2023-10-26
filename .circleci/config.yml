@@ -4,7 +4,7 @@ executors:
   build-executor:
     docker:
       - image: ubuntu:20.04
-
+    resource_class: small
 jobs:
   build:
     executor: build-executor
