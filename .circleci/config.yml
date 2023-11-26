@@ -19,7 +19,7 @@ jobs:
           name : check out nginx
           command : |
             echo "The code is in $(pwd)"
-            pwd
+            echo "The code is in $(ls -la)"
       - run:
           name: Build and test
           command: |
