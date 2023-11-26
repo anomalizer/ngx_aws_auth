@@ -13,13 +13,13 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update
-            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget
+            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget cmake
       - checkout
-      - run: 
-          name : check out nginx
-          command : |
-            echo "The code is in $(pwd)"
-            echo "The code is in $(ls -la)"
+      # - run: 
+      #     name : check out nginx
+      #     command : |
+      #       echo "The code is in $(pwd)"
+      #       echo "The code is in $(ls -la)"
       - run:
           name: Build and test
           command: |
