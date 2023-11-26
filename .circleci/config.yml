@@ -13,7 +13,10 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update
-            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget cmake
+            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget
+            echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+            echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+            apt-get install -y cmake
       - checkout
       # - run: 
       #     name : check out nginx
