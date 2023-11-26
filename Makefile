@@ -17,6 +17,7 @@ prepare-travis-env:
 	tar -xzf nginx-${NGINX_VERSION}.tar.gz
 	ln -s nginx-${NGINX_VERSION} ${NGX_PATH}
 	ls /root
+	ls /root/project
 	cd ${NGX_PATH} && ./configure --with-http_ssl_module --with-cc=$(CC) --add-module=~/project/ngx_aws_auth
 
 nginx:

@@ -15,6 +15,7 @@ jobs:
             apt-get update
             apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget
       - checkout
+      - run: echo "The code is in $(pwd)"
       - run:
           name: Build and test
           command: |
