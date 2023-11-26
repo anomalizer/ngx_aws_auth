@@ -15,7 +15,11 @@ jobs:
             apt-get update
             apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget
       - checkout
-      - run: echo "The code is in $(pwd)"
+      - run: 
+          name : check out nginx
+          command : |
+            echo "The code is in $(pwd)"
+            pwd
       - run:
           name: Build and test
           command: |
