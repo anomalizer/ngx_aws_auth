@@ -16,17 +16,17 @@ prepare-travis-env:
 	wget --no-verbose https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
 	tar -xzf nginx-${NGINX_VERSION}.tar.gz
 	ln -s nginx-${NGINX_VERSION} ${NGX_PATH}
-	cd ${NGX_PATH} && ./configure --with-http_ssl_module --with-cc=$(CC) --add-module=.
+	cd ${NGX_PATH} && ./configure --with-http_ssl_module --with-cc=$(CC) --add-module=/root/project
 
 nginx:
 	cd ${NGX_PATH} && rm -rf ${NGX_PATH}/objs/src/core/nginx.o && make
 
 vendor/cmocka:
-	git submodule init && git submodule update
+	cd /root/project && git submodule init && git submodule update
 
-.cmocka_build: vendor/cmocka
-	mkdir .cmocka_build && cd .cmocka_build \
-	&& cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_MAKE_PROGRAM=make ../vendor/cmocka \
+.cmocka_build:
+	cd /root/project && git submodule init && git submodule update && mkdir .cmocka_build && cd .cmocka_build \
+	&& cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_MAKE_PROGRAM=make /root/project/vendor/cmocka \
 	&& make && sudo make install
 
 test: .cmocka_build | nginx

@@ -13,8 +13,16 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update
-            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget
+            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget git sudo
+      - run:
+          name: Install cmake
+          command: |
+            echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+            echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
+            apt-get install -y cmake
       - checkout
+
       - run:
           name: Build and test
           command: |
@@ -27,3 +35,4 @@ workflows:
   build:
     jobs:
       - build
+      
