@@ -22,6 +22,8 @@ nginx:
 	cd ${NGX_PATH} && rm -rf ${NGX_PATH}/objs/src/core/nginx.o && make
 
 vendor/cmocka:
+	cd /root/project
+	echo "git submodule init && git submodule update"
 	git submodule init && git submodule update
 
 .cmocka_build: vendor/cmocka

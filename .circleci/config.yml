@@ -22,11 +22,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
             apt-get install -y cmake
       - checkout
-      # - run: 
-      #     name : check out nginx
-      #     command : |
-      #       echo "The code is in $(pwd)"
-      #       echo "The code is in $(ls -la)"
+
       - run:
           name: Build and test
           command: |
