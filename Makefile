@@ -22,13 +22,11 @@ nginx:
 	cd ${NGX_PATH} && rm -rf ${NGX_PATH}/objs/src/core/nginx.o && make
 
 vendor/cmocka:
-	cd /root/project
-	echo "git submodule init && git submodule update"
-	git submodule init && git submodule update
+	cd /root/project && git submodule init && git submodule update
 
 .cmocka_build: vendor/cmocka
 	mkdir .cmocka_build && cd .cmocka_build \
-	&& cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_MAKE_PROGRAM=make ../vendor/cmocka \
+	&& cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_MAKE_PROGRAM=make /root/project/vendor/cmocka \
 	&& make && sudo make install
 
 test: .cmocka_build | nginx
