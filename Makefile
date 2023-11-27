@@ -24,8 +24,8 @@ nginx:
 vendor/cmocka:
 	cd /root/project && git submodule init && git submodule update
 
-.cmocka_build: vendor/cmocka
-	mkdir .cmocka_build && cd .cmocka_build \
+.cmocka_build:
+	cd /root/project && git submodule init && git submodule update && mkdir .cmocka_build && cd .cmocka_build \
 	&& cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_MAKE_PROGRAM=make /root/project/vendor/cmocka \
 	&& make && sudo make install
 
