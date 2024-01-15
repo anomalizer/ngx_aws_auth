@@ -512,7 +512,7 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
         return NGX_ENOMEM;
     }
     ngx_str_t h_name = ngx_string("http_content_md5");
-    if (ngx_http_variable_unknown_header(val, &h_name, &r->headers_in.headers.part, sizeof("http_")-1) == NGX_OK){
+    if (ngx_http_variable_unknown_header(r, val, &h_name, &r->headers_in.headers.part, sizeof("http_")-1) == NGX_OK){
         if (val->not_found == 0) {
             ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "Content-MD5: %s", val->data);
             el_sign = ngx_array_push(to_sign);
@@ -539,7 +539,7 @@ ngx_http_aws_auth_variable_s3(ngx_http_request_t *r, ngx_http_variable_value_t *
     }
     ngx_http_aws_auth_sgn_newline(to_sign);
     ngx_str_t h_date = ngx_string("http_date");
-    if (ngx_http_variable_unknown_header(val, &h_date, &r->headers_in.headers.part, sizeof("http_")-1) == NGX_OK) {
+    if (ngx_http_variable_unknown_header(r, val, &h_date, &r->headers_in.headers.part, sizeof("http_")-1) == NGX_OK) {
         if (val->not_found == 0) {
             ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, "Date: %s", val->data);
             el_sign = ngx_array_push(to_sign);
