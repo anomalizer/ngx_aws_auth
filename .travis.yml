@@ -14,10 +14,10 @@ addons:
 
 env:
   jobs:
-    - NGINX_VERSION=1.18.0 # stable version
-    - NGINX_VERSION=1.19.4 # mainline
-    - NGINX_VERSION=1.16.1 # legacy 1
-    - NGINX_VERSION=1.14.2 # legacy 2
+    - NGINX_VERSION=1.22.0 # stable version
+    - NGINX_VERSION=1.23.1 # mainline
+    - NGINX_VERSION=1.20.2 # legacy 1
+    - NGINX_VERSION=1.18.0 # legacy 2    
   global:
     - LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
 
