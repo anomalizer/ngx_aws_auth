@@ -3,7 +3,7 @@ version: 2.1
 executors:
   build-executor:
     docker:
-      - image: ubuntu:20.04
+      - image: ubuntu:24.04
     resource_class: small
 jobs:
   build:
