@@ -24,8 +24,9 @@
 #define __NGX_AWS_FUNCTIONS_INTERNAL__H__
 
 #include <time.h>
-#include <ngx_times.h>
+#include <ngx_config.h>
 #include <ngx_core.h>
+#include <ngx_times.h>
 #include <ngx_http.h>
 
 #include "crypto_helper.h"
@@ -146,6 +147,11 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 	for(i = 0; i < query_string_args->nelts; i++) {
 		qs_arg = &((header_pair_t*)query_string_args->elts)[i];
 
+        if(i > 0) {
+            *(retval->data + retval->len) = '&';
+            retval->len++;
+        }
+
 		ngx_memcpy(retval->data + retval->len, qs_arg->key.data, qs_arg->key.len);
 		retval->len += qs_arg->key.len;
 
@@ -154,11 +160,7 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 
 		ngx_memcpy(retval->data + retval->len, qs_arg->value.data, qs_arg->value.len);
 		retval->len += qs_arg->value.len;
-
-		*(retval->data + retval->len) = '&';
-		retval->len++;
 	}
-	retval->len--;
 
   safe_ngx_log_error(req, "canonical qs constructed is %V", retval);
 

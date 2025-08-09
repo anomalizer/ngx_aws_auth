@@ -1,7 +1,7 @@
 #ifndef __NGX_AWS_AUTH__CRYPTO_HELPER__
 #define __NGX_AWS_AUTH__CRYPTO_HELPER__
 
-
+#include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_palloc.h>
 
