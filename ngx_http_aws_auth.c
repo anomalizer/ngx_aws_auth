@@ -176,7 +176,7 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
             continue;
         }
 
-        h = ngx_list_push(&r->headers_in.headers);
+        h = ngx_list_push(&r->headers_out.headers);
         if (h == NULL) {
             return NGX_ERROR;
         }
