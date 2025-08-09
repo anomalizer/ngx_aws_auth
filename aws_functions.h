@@ -24,8 +24,9 @@
 #define __NGX_AWS_FUNCTIONS_INTERNAL__H__
 
 #include <time.h>
-#include <ngx_times.h>
+#include <ngx_config.h>
 #include <ngx_core.h>
+#include <ngx_times.h>
 #include <ngx_http.h>
 
 #include "crypto_helper.h"
