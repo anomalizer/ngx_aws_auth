@@ -40,29 +40,32 @@ ngx_str_t* ngx_aws_auth__hash_sha256(ngx_pool_t *pool, const ngx_str_t *blob) {
     unsigned int hash_len;
     ngx_str_t *const retval = ngx_palloc(pool, sizeof(ngx_str_t));
 
-    EVP_MD_CTX *mdctx;
-    mdctx = EVP_MD_CTX_new();
-    
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
     if (mdctx == NULL) {
-        // Handle error
         return NULL;
     }
 
-    if((mdctx = EVP_MD_CTX_create()) == NULL)
+    if (1 != EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL)) {
+        EVP_MD_CTX_free(mdctx);
         return NULL;
+    }
 
-    if(1 != EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL))
+    if (1 != EVP_DigestUpdate(mdctx, blob->data, blob->len)) {
+        EVP_MD_CTX_free(mdctx);
         return NULL;
+    }
 
-    if(1 != EVP_DigestUpdate(mdctx, blob->data, blob->len))
+    if (1 != EVP_DigestFinal_ex(mdctx, hash, &hash_len)) {
+        EVP_MD_CTX_free(mdctx);
         return NULL;
-
-    if(1 != EVP_DigestFinal_ex(mdctx, hash, &hash_len))
-        return NULL;
+    }
 
     EVP_MD_CTX_free(mdctx);
 
     retval->data = ngx_palloc(pool, hash_len * 2 + 1);
+    if (retval->data == NULL) {
+        return NULL;
+    }
     retval->len = hash_len * 2;
     ngx_hex_dump(retval->data, hash, hash_len);
     return retval;
