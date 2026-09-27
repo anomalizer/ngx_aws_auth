@@ -1,6 +1,6 @@
 # AWS proxy module
 
-[![Build Status](https://travis-ci.com/anomalizer/ngx_aws_auth.svg?branch=master)](https://travis-ci.com/anomalizer/ngx_aws_auth)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/anomalizer/ngx_aws_auth/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/anomalizer/ngx_aws_auth/tree/master)
  [![Gitter chat](https://badges.gitter.im/anomalizer/ngx_aws_auth.png)](https://gitter.im/ngx_aws_auth/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 
 This nginx module can proxy requests to authenticated S3 backends using Amazon's
@@ -99,7 +99,7 @@ L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
 
 ```
 ## Supported environments
-This plugin is tested against a variety of nginx versions, compilers, OS versions and hardware architectures. Take a look at the .travis.yml file or the latest travis build status to see the versions that the plugin has been tested against
+This plugin is tested in CI. Take a look at the .circleci/config.yml file or the latest CircleCI build status to see the versions that the plugin is tested against
 
 
 ## Known limitations
