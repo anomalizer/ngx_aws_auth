@@ -7,12 +7,12 @@ all:
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-.PHONY: all clean test nginx prepare-travis-env
+.PHONY: all clean test nginx prepare-nginx
 
 
 NGX_PATH := $(shell echo `pwd`/nginx)
 
-prepare-travis-env:
+prepare-nginx:
 	wget --no-verbose https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz
 	tar -xzf nginx-${NGINX_VERSION}.tar.gz
 	ln -s nginx-${NGINX_VERSION} ${NGX_PATH}

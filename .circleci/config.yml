@@ -28,7 +28,7 @@ jobs:
           command: |
             export NGINX_VERSION=1.18.0
             export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib    
-            make prepare-travis-env nginx test
+            make prepare-nginx nginx test
 
 workflows:
   version: 2
