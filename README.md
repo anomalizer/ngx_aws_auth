@@ -99,7 +99,35 @@ L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
 
 ```
 ## Supported environments
-This plugin is tested in CI. Take a look at the .circleci/config.yml file or the latest CircleCI build status to see the versions that the plugin is tested against
+CI runs the test suite against a matrix of target environments (see
+[.circleci/config.yml](.circleci/config.yml)):
+
+| Distro           | Arch    | libc  | Compiler |
+|------------------|---------|-------|----------|
+| Ubuntu 26.04 LTS | x86_64  | glibc | gcc      |
+| Ubuntu 24.04 LTS | aarch64 | glibc | clang    |
+| Fedora (latest)  | x86_64  | glibc | gcc      |
+| Alpine (latest)  | x86_64  | musl  | clang    |
+| Alpine (latest)  | aarch64 | musl  | gcc      |
+
+Tests run against a pinned stable nginx release (see `NGINX_VERSION` in
+`.circleci/config.yml`). ARM jobs run on native aarch64 runners, not emulation.
+
+To reproduce a build locally, run the same commands in any OCI container, e.g.
+with podman:
+
+```bash
+podman run --rm -v "$PWD":/src:ro docker.io/library/alpine:latest sh -c '
+  apk add --no-cache build-base wget git sudo cmake openssl-dev pcre2-dev zlib-dev &&
+  cp -a /src/. /build/ && cd /build &&
+  export NGINX_VERSION=1.30.5 LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/usr/local/lib64 &&
+  make prepare-nginx nginx test'
+```
+
+`CC` selects the compiler (e.g. `CC=clang`) and `NGX_CC_OPT` passes extra
+compiler flags to nginx's build via `--with-cc-opt`. The alpine+clang CI job
+sets `-Wno-error=sign-compare` because nginx's `-Werror` trips over musl's
+`CMSG_NXTHDR` macro.
 
 
 ## Known limitations
