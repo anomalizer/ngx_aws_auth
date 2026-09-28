@@ -38,23 +38,23 @@ workflows:
   test-matrix:
     jobs:
       - build-and-test:
-          name: ubuntu-2604-x86-gcc
+          name: ubuntu-2604-x86_64-gcc
           image: ubuntu:26.04
           resource_class: small
           packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake"
       - build-and-test:
-          name: ubuntu-2404-arm-clang
+          name: ubuntu-2404-aarch64-clang
           image: ubuntu:24.04
           resource_class: arm.medium
           cc: clang
           packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake clang"
       - build-and-test:
-          name: fedora-x86-gcc
+          name: fedora-x86_64-gcc
           image: fedora:latest
           resource_class: small
           packages: "dnf install -y gcc make cmake wget git sudo binutils findutils tar gzip openssl-devel pcre2-devel zlib-devel"
       - build-and-test:
-          name: alpine-x86-clang
+          name: alpine-x86_64-clang
           image: alpine:latest
           resource_class: small
           cc: clang
@@ -63,7 +63,7 @@ workflows:
           cc_opt: "-Wno-error=sign-compare"
           packages: "apk add --no-cache build-base wget git sudo cmake clang openssl-dev pcre2-dev zlib-dev linux-headers"
       - build-and-test:
-          name: alpine-arm-gcc
+          name: alpine-aarch64-gcc
           image: alpine:latest
           resource_class: arm.medium
           packages: "apk add --no-cache build-base wget git sudo cmake openssl-dev pcre2-dev zlib-dev linux-headers"
