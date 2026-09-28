@@ -1,6 +1,6 @@
 # AWS proxy module
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/anomalizer/ngx_aws_auth/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/anomalizer/ngx_aws_auth/tree/master)
+[![CI](https://github.com/anomalizer/ngx_aws_auth/actions/workflows/ci.yml/badge.svg)](https://github.com/anomalizer/ngx_aws_auth/actions/workflows/ci.yml)
  [![Gitter chat](https://badges.gitter.im/anomalizer/ngx_aws_auth.png)](https://gitter.im/ngx_aws_auth/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 
 This nginx module can proxy requests to authenticated S3 backends using Amazon's
@@ -100,7 +100,7 @@ L4vRLWAO92X5L3Sqk5QydUSdB0nC9+1wfqLMOKLbRp4=
 ```
 ## Supported environments
 CI runs the test suite against a matrix of target environments (see
-[.circleci/config.yml](.circleci/config.yml)):
+[.github/workflows/ci.yml](.github/workflows/ci.yml)):
 
 | Distro           | Arch    | libc  | Compiler |
 |------------------|---------|-------|----------|
@@ -111,7 +111,7 @@ CI runs the test suite against a matrix of target environments (see
 | Alpine (latest)  | aarch64 | musl  | gcc      |
 
 Tests run against a pinned stable nginx release (see `NGINX_VERSION` in
-`.circleci/config.yml`). ARM jobs run on native aarch64 runners, not emulation.
+`.github/workflows/ci.yml`). ARM jobs run on native aarch64 runners, not emulation.
 
 The unit-test dependency (cmocka) is vendored as a git submodule pinned to
 `cmocka-2.0.2`; `make test` bootstraps the submodule and builds it in-tree as a
