@@ -3,7 +3,7 @@ version: 2.1
 executors:
   build-executor:
     docker:
-      - image: ubuntu:20.04
+      - image: ubuntu:26.04
     resource_class: small
 jobs:
   build:
@@ -13,21 +13,14 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update
-            apt-get install -y libpcre3 libpcre3-dev zlib1g-dev libssl-dev build-essential wget git sudo
-      - run:
-          name: Install cmake
-          command: |
-            echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
-            echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
-            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get -y install tzdata
-            apt-get install -y cmake
+            DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake
       - checkout
 
       - run:
           name: Build and test
           command: |
-            export NGINX_VERSION=1.18.0
-            export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib    
+            export NGINX_VERSION=1.30.5
+            export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
             make prepare-nginx nginx test
 
 workflows:
