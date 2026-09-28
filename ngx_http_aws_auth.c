@@ -19,6 +19,7 @@ typedef struct {
     ngx_str_t signing_key_decoded;
     ngx_str_t endpoint;
     ngx_str_t bucket_name;
+    ngx_str_t security_token;
     ngx_uint_t enabled;
 } ngx_http_aws_auth_conf_t;
 
@@ -57,6 +58,13 @@ static ngx_command_t  ngx_http_aws_auth_commands[] = {
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_aws_auth_conf_t, bucket_name),
+      NULL },
+
+    { ngx_string("aws_security_token"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_aws_auth_conf_t, security_token),
       NULL },
 
     { ngx_string("aws_sign"),
@@ -125,6 +133,7 @@ ngx_http_aws_auth_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_str_value(conf->signing_key, prev->signing_key, "");
     ngx_conf_merge_str_value(conf->endpoint, prev->endpoint, "s3.amazonaws.com");
     ngx_conf_merge_str_value(conf->bucket_name, prev->bucket_name, "");
+    ngx_conf_merge_str_value(conf->security_token, prev->security_token, "");
 
     if(conf->signing_key_decoded.data == NULL)
     {
@@ -161,7 +170,7 @@ ngx_http_aws_proxy_sign(ngx_http_request_t *r)
     }
 
     const ngx_array_t* headers_out = ngx_aws_auth__sign(r->pool, r,
-        &conf->access_key, &conf->signing_key_decoded, &conf->key_scope, &conf->bucket_name, &conf->endpoint);
+        &conf->access_key, &conf->signing_key_decoded, &conf->key_scope, &conf->bucket_name, &conf->endpoint, &conf->security_token);
 
     ngx_uint_t i;
     for(i = 0; i < headers_out->nelts; i++)
