@@ -29,7 +29,8 @@ jobs:
             export NGINX_VERSION=1.30.5
             export CC=<<parameters.cc>>
             export NGX_CC_OPT=<<parameters.cc_opt>>
-            export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
+            # /usr/local/lib64: cmake installs cmocka there on RHEL-family (Fedora)
+            export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/usr/local/lib64
             make prepare-nginx nginx test
 
 workflows:
