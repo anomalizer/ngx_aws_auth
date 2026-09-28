@@ -1,2 +1,4 @@
 /.cmocka_build
 /test_suite
+/nginx
+/nginx-*/
