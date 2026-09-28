@@ -19,40 +19,40 @@ jobs:
     container: ${{ matrix.image }}
     strategy:
       fail-fast: false
-    matrix:
-      include:
-        - name: ubuntu-2604-x86_64-gcc
-          runner: ubuntu-latest
-          image: ubuntu:26.04
-          packages: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git cmake
-          cc: gcc
-          cc_opt: ''
-        - name: ubuntu-2404-aarch64-clang
-          runner: ubuntu-24.04-arm
-          image: ubuntu:24.04
-          packages: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git cmake clang
-          cc: clang
-          cc_opt: ''
-        - name: fedora-x86_64-gcc
-          runner: ubuntu-latest
-          image: fedora:latest
-          packages: dnf install -y gcc make cmake wget git binutils findutils tar gzip openssl-devel pcre2-devel zlib-devel
-          cc: gcc
-          cc_opt: ''
-        - name: alpine-x86_64-clang
-          runner: ubuntu-latest
-          image: alpine:latest
-          # musl's CMSG_NXTHDR triggers -Wsign-compare under nginx's -Werror
-          # when built with clang; keep the warning but don't fail the build.
-          packages: apk add --no-cache build-base wget git cmake clang openssl-dev pcre2-dev zlib-dev linux-headers
-          cc: clang
-          cc_opt: -Wno-error=sign-compare
-        - name: alpine-aarch64-gcc
-          runner: ubuntu-24.04-arm
-          image: alpine:latest
-          packages: apk add --no-cache build-base wget git cmake openssl-dev pcre2-dev zlib-dev linux-headers
-          cc: gcc
-          cc_opt: ''
+      matrix:
+        include:
+          - name: ubuntu-2604-x86_64-gcc
+            runner: ubuntu-latest
+            image: ubuntu:26.04
+            packages: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git cmake
+            cc: gcc
+            cc_opt: ''
+          - name: ubuntu-2404-aarch64-clang
+            runner: ubuntu-24.04-arm
+            image: ubuntu:24.04
+            packages: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git cmake clang
+            cc: clang
+            cc_opt: ''
+          - name: fedora-x86_64-gcc
+            runner: ubuntu-latest
+            image: fedora:latest
+            packages: dnf install -y gcc make cmake wget git binutils findutils tar gzip openssl-devel pcre2-devel zlib-devel
+            cc: gcc
+            cc_opt: ''
+          - name: alpine-x86_64-clang
+            runner: ubuntu-latest
+            image: alpine:latest
+            # musl's CMSG_NXTHDR triggers -Wsign-compare under nginx's -Werror
+            # when built with clang; keep the warning but don't fail the build.
+            packages: apk add --no-cache build-base wget git cmake clang openssl-dev pcre2-dev zlib-dev linux-headers
+            cc: clang
+            cc_opt: -Wno-error=sign-compare
+          - name: alpine-aarch64-gcc
+            runner: ubuntu-24.04-arm
+            image: alpine:latest
+            packages: apk add --no-cache build-base wget git cmake openssl-dev pcre2-dev zlib-dev linux-headers
+            cc: gcc
+            cc_opt: ''
     steps:
       - name: Install dependencies
         run: ${{ matrix.packages }}
