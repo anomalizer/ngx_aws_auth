@@ -1,31 +1,68 @@
 version: 2.1
 
-executors:
-  build-executor:
-    docker:
-      - image: ubuntu:26.04
-    resource_class: small
 jobs:
-  build:
-    executor: build-executor
+  build-and-test:
+    parameters:
+      image:
+        type: string
+      resource_class:
+        type: string
+      packages:
+        type: string
+      cc:
+        type: string
+        default: gcc
+      cc_opt:
+        type: string
+        default: ""
+    docker:
+      - image: <<parameters.image>>
+    resource_class: <<parameters.resource_class>>
     steps:
       - run:
           name: Install dependencies
-          command: |
-            apt-get update
-            DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake
+          command: "<<parameters.packages>>"
       - checkout
-
       - run:
           name: Build and test
           command: |
             export NGINX_VERSION=1.30.5
+            export CC=<<parameters.cc>>
+            export NGX_CC_OPT=<<parameters.cc_opt>>
             export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
             make prepare-nginx nginx test
 
 workflows:
   version: 2
-  build:
+  test-matrix:
     jobs:
-      - build
-      
+      - build-and-test:
+          name: ubuntu-2604-x86-gcc
+          image: ubuntu:26.04
+          resource_class: small
+          packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake"
+      - build-and-test:
+          name: ubuntu-2404-arm-clang
+          image: ubuntu:24.04
+          resource_class: arm.medium
+          cc: clang
+          packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake clang"
+      - build-and-test:
+          name: fedora-x86-gcc
+          image: fedora:latest
+          resource_class: small
+          packages: "dnf install -y gcc make cmake wget git sudo binutils findutils tar gzip openssl-devel pcre2-devel zlib-devel"
+      - build-and-test:
+          name: alpine-x86-clang
+          image: alpine:latest
+          resource_class: small
+          cc: clang
+          # musl's CMSG_NXTHDR triggers -Wsign-compare under nginx's -Werror
+          # when built with clang; keep the warning but don't fail the build.
+          cc_opt: "-Wno-error=sign-compare"
+          packages: "apk add --no-cache build-base wget git sudo cmake clang openssl-dev pcre2-dev zlib-dev linux-headers"
+      - build-and-test:
+          name: alpine-arm-gcc
+          image: alpine:latest
+          resource_class: arm.medium
+          packages: "apk add --no-cache build-base wget git sudo cmake openssl-dev pcre2-dev zlib-dev linux-headers"
