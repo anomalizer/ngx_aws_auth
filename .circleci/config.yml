@@ -33,6 +33,15 @@ jobs:
             export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/usr/local/lib64
             make prepare-nginx nginx test
 
+  all-targets:
+    docker:
+      - image: alpine:latest
+    resource_class: small
+    steps:
+      - run:
+          name: Matrix summary
+          command: echo "all target jobs passed"
+
 workflows:
   version: 2
   test-matrix:
@@ -67,3 +76,12 @@ workflows:
           image: alpine:latest
           resource_class: arm.medium
           packages: "apk add --no-cache build-base wget git sudo cmake openssl-dev pcre2-dev zlib-dev linux-headers"
+      # Single aggregate status for the whole matrix; goes green only when
+      # every target job above has passed.
+      - all-targets:
+          requires:
+            - ubuntu-2604-x86_64-gcc
+            - ubuntu-2404-aarch64-clang
+            - fedora-x86_64-gcc
+            - alpine-x86_64-clang
+            - alpine-aarch64-gcc
