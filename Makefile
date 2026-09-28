@@ -19,7 +19,8 @@ prepare-nginx:
 	rm -rf nginx-${NGINX_VERSION} ${NGX_PATH}
 	tar -xzf nginx-${NGINX_VERSION}.tar.gz
 	ln -s nginx-${NGINX_VERSION} ${NGX_PATH}
-	cd ${NGX_PATH} && ./configure --with-http_ssl_module --with-cc=$(CC) --add-module=$(CURDIR)
+# NGX_CC_OPT: optional extra compiler flags for nginx's build (via --with-cc-opt)
+	cd ${NGX_PATH} && ./configure --with-http_ssl_module --with-cc=$(CC) --with-cc-opt="$(NGX_CC_OPT)" --add-module=$(CURDIR)
 
 nginx:
 	cd ${NGX_PATH} && rm -rf ${NGX_PATH}/objs/src/core/nginx.o && make
