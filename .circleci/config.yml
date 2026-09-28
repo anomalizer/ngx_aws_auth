@@ -29,8 +29,6 @@ jobs:
             export NGINX_VERSION=1.30.5
             export CC=<<parameters.cc>>
             export NGX_CC_OPT=<<parameters.cc_opt>>
-            # /usr/local/lib64: cmake installs cmocka there on RHEL-family (Fedora)
-            export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/usr/local/lib64
             make prepare-nginx nginx test
 
   all-targets:
@@ -50,18 +48,18 @@ workflows:
           name: ubuntu-2604-x86_64-gcc
           image: ubuntu:26.04
           resource_class: small
-          packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake"
+          packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git cmake"
       - build-and-test:
           name: ubuntu-2404-aarch64-clang
           image: ubuntu:24.04
           resource_class: arm.medium
           cc: clang
-          packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git sudo cmake clang"
+          packages: "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre2-dev zlib1g-dev libssl-dev build-essential wget git cmake clang"
       - build-and-test:
           name: fedora-x86_64-gcc
           image: fedora:latest
           resource_class: small
-          packages: "dnf install -y gcc make cmake wget git sudo binutils findutils tar gzip openssl-devel pcre2-devel zlib-devel"
+          packages: "dnf install -y gcc make cmake wget git binutils findutils tar gzip openssl-devel pcre2-devel zlib-devel"
       - build-and-test:
           name: alpine-x86_64-clang
           image: alpine:latest
@@ -70,12 +68,12 @@ workflows:
           # musl's CMSG_NXTHDR triggers -Wsign-compare under nginx's -Werror
           # when built with clang; keep the warning but don't fail the build.
           cc_opt: "-Wno-error=sign-compare"
-          packages: "apk add --no-cache build-base wget git sudo cmake clang openssl-dev pcre2-dev zlib-dev linux-headers"
+          packages: "apk add --no-cache build-base wget git cmake clang openssl-dev pcre2-dev zlib-dev linux-headers"
       - build-and-test:
           name: alpine-aarch64-gcc
           image: alpine:latest
           resource_class: arm.medium
-          packages: "apk add --no-cache build-base wget git sudo cmake openssl-dev pcre2-dev zlib-dev linux-headers"
+          packages: "apk add --no-cache build-base wget git cmake openssl-dev pcre2-dev zlib-dev linux-headers"
       # Single aggregate status for the whole matrix; goes green only when
       # every target job above has passed.
       - all-targets:
