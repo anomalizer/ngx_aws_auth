@@ -9,7 +9,7 @@ all:
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-.PHONY: all clean test nginx prepare-nginx .cmocka_build
+.PHONY: all clean test nginx prepare-nginx cmocka
 
 
 NGX_PATH := $(shell echo `pwd`/nginx)
@@ -25,20 +25,19 @@ prepare-nginx:
 nginx:
 	cd ${NGX_PATH} && rm -rf ${NGX_PATH}/objs/src/core/nginx.o && make
 
-vendor/cmocka:
-	cd $(CURDIR) && git submodule init && git submodule update
+# Always re-runs and rebuilds from scratch: guarantees a fresh container, a
+# copied tree, or a submodule pin bump can't configure or link a stale libcmocka.
+.PHONY: cmocka
+cmocka:
+	cd $(CURDIR) && git submodule update --init \
+	&& rm -rf .cmocka_build \
+	&& cmake -S vendor/cmocka -B .cmocka_build -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_COMPILER=$(CC) \
+	&& cmake --build .cmocka_build --target cmocka
 
-# Always re-runs so `sudo make install` isn't skipped when a previous run left
-# .cmocka_build behind (e.g. local reruns against a fresh container).
-.cmocka_build:
-	cd $(CURDIR) && git submodule init && git submodule update && mkdir -p .cmocka_build && cd .cmocka_build \
-	&& cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_MAKE_PROGRAM=make $(CURDIR)/vendor/cmocka \
-	&& make && sudo make install
-
-test: .cmocka_build | nginx
+test: cmocka | nginx
 	strip -N main -o ${NGX_PATH}/objs/src/core/nginx_without_main.o ${NGX_PATH}/objs/src/core/nginx.o \
 	&& mv ${NGX_PATH}/objs/src/core/nginx_without_main.o ${NGX_PATH}/objs/src/core/nginx.o \
-	&& $(CC) test_suite.c $(CFLAGS) -o test_suite -lcmocka `find ${NGX_PATH}/objs -name \*.o` -ldl -lpthread -lcrypt -lssl -lpcre2-8 -lcrypto -lz \
+	&& $(CC) test_suite.c $(CFLAGS) -o test_suite .cmocka_build/src/libcmocka.a `find ${NGX_PATH}/objs -name \*.o` -ldl -lpthread -lcrypt -lssl -lpcre2-8 -lcrypto -lz \
 	&& ./test_suite
 
 clean:
