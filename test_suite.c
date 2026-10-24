@@ -152,6 +152,19 @@ static void canonical_qs_two_arg_reverse(void **state) {
     assert_ngx_string_equal(*canon_qs, cargs);
 }
 
+static void canonical_qs_duplicate_keys_sort_by_value(void **state) {
+    (void) state; /* unused */
+	ngx_http_request_t request;
+	ngx_str_t args = ngx_string("foo=z&foo=a");
+	ngx_str_t expected = ngx_string("foo=a&foo=z");
+	request.args = args;
+  request.connection = NULL;
+
+	const ngx_str_t *canon_qs = ngx_aws_auth__canonize_query_string(pool, &request);
+    assert_int_equal(canon_qs->len, expected.len);
+    assert_memory_equal(canon_qs->data, expected.data, expected.len);
+}
+
 static void canonical_qs_subrequest(void **state) {
     (void) state; /* unused */
 	ngx_http_request_t request;
@@ -286,6 +299,7 @@ int main() {
         cmocka_unit_test(canonical_qs_empty),
         cmocka_unit_test(canonical_qs_single_arg),
         cmocka_unit_test(canonical_qs_two_arg_reverse),
+        cmocka_unit_test(canonical_qs_duplicate_keys_sort_by_value),
         cmocka_unit_test(canonical_qs_subrequest),
         cmocka_unit_test(canonical_url_sans_qs),
         cmocka_unit_test(canonical_url_with_qs),

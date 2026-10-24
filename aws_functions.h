@@ -92,6 +92,25 @@ static inline int ngx_aws_auth__cmp_hnames(const void *one, const void *two) {
     }
 }
 
+static inline int ngx_aws_auth__cmp_query_args(const void *one, const void *two) {
+    header_pair_t *first, *second;
+    int ret;
+    first  = (header_pair_t *) one;
+    second = (header_pair_t *) two;
+
+    ret = ngx_strncmp(first->key.data, second->key.data, ngx_min(first->key.len, second->key.len));
+    if (ret == 0) {
+        ret = first->key.len - second->key.len;
+    }
+    if (ret == 0) {
+        ret = ngx_strncmp(first->value.data, second->value.data, ngx_min(first->value.len, second->value.len));
+    }
+    if (ret == 0) {
+        ret = first->value.len - second->value.len;
+    }
+    return ret;
+}
+
 static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *pool,
 	const ngx_http_request_t *req) {
 	u_char *p, *ampersand, *equal, *last;
@@ -138,7 +157,7 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 	}
 
 	ngx_qsort(query_string_args->elts, (size_t) query_string_args->nelts,
-		sizeof(header_pair_t), ngx_aws_auth__cmp_hnames);
+		sizeof(header_pair_t), ngx_aws_auth__cmp_query_args);
 
 	retval->data = ngx_palloc(pool, req->args.len*3 + query_string_args->nelts*2);
 	retval->len = 0;
