@@ -160,7 +160,8 @@ static inline const ngx_str_t* ngx_aws_auth__canonize_query_string(ngx_pool_t *p
 	}
 	retval->len--;
 
-  safe_ngx_log_error(req, "canonical qs constructed is %V", retval);
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical qs constructed is %V", retval);
 
 	return retval;
 }
@@ -324,11 +325,14 @@ static inline const ngx_str_t* ngx_aws_auth__canon_url(ngx_pool_t *pool, const n
   ngx_memcpy(retval->data, req_uri_data, req_uri_len);
   retval->len = req_uri_len;
 
-  safe_ngx_log_error(req, "canonical url extracted before URI encoding is %V", retval);
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical url extracted before URI encoding is %V", retval);
 
   // then URI-encode it per RFC 3986
   ngx_aws_auth__escape_uri(pool, retval);
-  safe_ngx_log_error(req, "canonical url extracted after URI encoding is %V", retval);
+
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical url extracted after URI encoding is %V", retval);
 
   return retval;
 }
@@ -360,7 +364,8 @@ static inline struct AwsCanonicalRequestDetails ngx_aws_auth__make_canonical_req
 		canon_headers.signed_header_names, request_body_hash) - retval.canon_request->data;
 	retval.header_list = canon_headers.header_list;
 
-  safe_ngx_log_error(req, "canonical req is %V", retval.canon_request);
+//  remove unnecessary log entries
+//  safe_ngx_log_error(req, "canonical req is %V", retval.canon_request);
 
 	return retval;
 }
