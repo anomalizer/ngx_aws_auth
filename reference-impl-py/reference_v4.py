@@ -55,11 +55,13 @@ def canon_querystring(qs_map):
     return {'cqs':'', 'qsmap':{}} # TODO: impl
 
 
-def make_headers(req_time, bucket, aws_headers, content_hash):
+def make_headers(req_time, bucket, aws_headers, content_hash, security_token):
     headers = []
     headers.append(['x-amz-content-sha256', content_hash])
     headers.append(['x-amz-date', req_time])
     headers.append(['Host', '%s.s3.amazonaws.com' % (bucket)])
+    if security_token:
+        headers.append(['x-amz-security-token', security_token])
 
     hmap = {}
     for x in headers:
@@ -77,10 +79,10 @@ def make_headers(req_time, bucket, aws_headers, content_hash):
     return {'hmap': hmap, 'sh': signed_headers, 'ch': canon_headers }
 
 
-def canon_request(req_time, bucket, url, qs_map, aws_headers):
+def canon_request(req_time, bucket, url, qs_map, token, aws_headers):
     qs = canon_querystring(qs_map)
     payload_hash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' #hardcoded
-    header_info = make_headers(req_time, bucket, None, payload_hash)
+    header_info = make_headers(req_time, bucket, None, payload_hash, token)
     cr = "\n".join(('GET', url, qs['cqs'], header_info['ch'], header_info['sh'], payload_hash)) # hardcoded method
     print cr
 
@@ -94,8 +96,8 @@ def sign_body(body=None):
 def get_scope(dt, region):
     return '%s/%s/s3/aws4_request' % (dt, region)
 
-def str_to_sign_v4(req_time, scope, bucket, url, qs_map, aws_headers):
-    cr_info = canon_request(req_time, bucket, url, qs_map, aws_headers)
+def str_to_sign_v4(req_time, scope, bucket, url, qs_map, token, aws_headers):
+    cr_info = canon_request(req_time, bucket, url, qs_map, token, aws_headers)
     h265 = sha256()
     h265.update(cr_info['cr_str'])
     hd = h265.hexdigest()
@@ -103,8 +105,8 @@ def str_to_sign_v4(req_time, scope, bucket, url, qs_map, aws_headers):
     print s2s
     return {'s2s': s2s, 'headers': cr_info['headers'], 'qs':cr_info['qs'], 'scope': scope, 'sh': cr_info['sh']}
 
-def sign(req_time, access_id, key, scope, bucket, url, qs_map, aws_headers):
-    s2s = str_to_sign_v4(req_time, scope, bucket, url, qs_map, aws_headers)
+def sign(req_time, access_id, key, scope, bucket, url, qs_map, token, aws_headers):
+    s2s = str_to_sign_v4(req_time, scope, bucket, url, qs_map, token, aws_headers)
     retval = hmac.new(key, s2s['s2s'], sha256)
     sig = retval.hexdigest()
     auth_header = 'AWS4-HMAC-SHA256 Credential=%s/%s,SignedHeaders=%s,Signature=%s' % (
@@ -113,9 +115,9 @@ def sign(req_time, access_id, key, scope, bucket, url, qs_map, aws_headers):
     return {'headers': s2s['headers'], 'qs':s2s['qs'], 'sig': sig}
 
 
-def get_data(req_time, access_id, key, scope, bucket, url, qs_map, aws_headers):
-    s = sign(req_time, access_id, key, scope, bucket, url, qs_map, aws_headers)
-    rurl = "http://%s.s3.amazonaws.com%s" % (bucket, url)
+def get_data(req_time, access_id, key, scope, bucket, url, qs_map, token, aws_headers):
+    s = sign(req_time, access_id, key, scope, bucket, url, qs_map, token, aws_headers)
+    rurl = "https://%s.s3.amazonaws.com%s" % (bucket, url)
 #    print rurl
 #    print s
     q = Request(rurl)
@@ -133,9 +135,12 @@ if __name__ == '__main__':
     aid = sys.argv[1]
     b64_key = sys.argv[2]
     scope = sys.argv[3]
-    request_time = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ') if len(sys.argv) == 4 else sys.argv[4]
+    bucket = sys.argv[4]
+    path = sys.argv[5]
+    token = sys.argv[6]
+    request_time = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ') if len(sys.argv) == 7 else sys.argv[7]
     print "Request time is %s" % request_time
-    get_data(request_time, aid, base64.b64decode(b64_key), scope, 'hw.anomalizer', '/lock.txt', {}, {})
+    print get_data(request_time, aid, base64.b64decode(b64_key), scope, bucket, path, {}, token, {})
 '''
 
 class TestStringMethods(unittest.TestCase):
@@ -144,8 +149,17 @@ class TestStringMethods(unittest.TestCase):
         key = base64.b64decode('k4EntTNoEN22pdavRF/KyeNx+e1BjtOGsCKu2CkBvnU=')
         aid = 'AKIDEXAMPLE'
         scope = '20150830/us-east-1/service/aws4_request'
-        s = sign(now, aid, key, scope, 'example', '/', {}, {})
-        self.assertEqual(s['sig'], '5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31')
+        s = sign(now, aid, key, scope, 'example', '/', {}, None, {})
+        self.assertEqual(s['sig'], '4ed4ec875ff02e55c7903339f4f24f8780b986a9cc9eff03f324d31da6a57690')
+
+    def test_simple_get_with_security_token(self):
+        now = '20150830T123600Z'
+        key = base64.b64decode('k4EntTNoEN22pdavRF/KyeNx+e1BjtOGsCKu2CkBvnU=')
+        aid = 'AKIDEXAMPLE'
+        scope = '20150830/us-east-1/service/aws4_request'
+        token = 'IQoJb3JpZ2luX2VjEGsaCXVzLWVhc3QtMSJGMEQCID6TMGyw8dapyAyoqK7nRRsWfs2UcGZlNge6gD67WouHAiBbxqJ6X61HRCges6DWx538dZlZnGDRtKM1dUcIi1HllirzAwjz//////////8BEAAaDDg0NzEzMDIwNzA1MCIMQXKhCFqhuwfirKHmKscD2kA3ab0pQdqJFH7Q5X5XX5OaHyiHkwAeLNyUKK+vwafYgixxMZqVHxyeZNWkFWMPbiHfW4TVEeG6D2/jG1QGOwbLJqTdkvrJqUoLU5bfqxdYIGyDO14k6q39NCg0EpXen54uIwRrDgPQZenPDASZy+NKnNnOnQ3EbJgXFOlxAQWLcUwP5Oab0s4BxLZ4F7c2DcCMJLLCpfIr0s9sYXM3cv6rDac/agjazkIooe3JfXOSqKQK9CBLFfYqXh+/pg4VwDJ6Y64Db1imRDdXZr98okg6P6+IXerOYnw9LilKnlLSfP9A0Hx4zkMToGJeNZVLhvQXfK23Ohv4k3ZgxS8WNlvGtyh13j7xEpmCLL1MbAMXQin8Zx8hePNdfH0+oPrAEHKORmYhF7Npp97vi4fZn4rJb0wyR+tzk4BUwU8bxsqo2QdNXj3JdBCeJtbcFOTkR9VRDNFKuxcCJ4YyHwSXegpRg64D/+eNvXEai74BR0CMlXD7ixo25zM+1qhAO8wtsDRZkuLq08KkccWFMJ7mtd5hF3a44qUtjzRnW4Oirt6HAegaotLvMsWxhlKEm6THfPN0B3GqVN4dx8I2/hlcRCoA/ytapSkwutyX8QU68AETTkURQmWBx8MMe3+fdNc6o6b9TgXXxeCMEnTHwF3lFaQIzI3v+V4WHF7IEU3FiH8Qc489d64D48l71akbXN89nArzgsKXB2MmmV2lM9YeCOnsKjmX8KDM0SXiEL2zF3sXQ6cpwXdHRFLWdM5neZxBxT2NXoCh8Xjx2VEzTJ20vLfq0qS/1WmOvzxa1Z4B4GJUx9Gho/2iLHXvrBh93kk72KbzHP15ZsKixGkF4CP2qqluraym5Mv2IXV1vZhipVedNBFCngOR603MyERCw0tKnYXuduDnvEV0J9Hgf+fyeiXSXH34K5Fq525/XZDKMm4='
+        s = sign(now, aid, key, scope, 'example', '/', {}, token, {})
+        self.assertEqual(s['sig'], 'c0979d16460957b789c4b31048e6e008e3888666e227e749d1a0bc5d5d8ab175')
 
 
 if __name__ == '__main__':
